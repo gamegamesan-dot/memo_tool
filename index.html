@@ -209,7 +209,7 @@ hr.sep{border:0;border-top:1px solid var(--navy-600);margin:22px 0}
 <section class="panel on" id="p-add">
   <div class="field">
     <label for="f-name">商品名</label>
-    <input type="text" id="f-name" placeholder="サキエル・XX 使徒XX A-03" autocomplete="off">
+    <input type="text" id="f-name" placeholder="せどりすとからタイトルを貼り付け" autocomplete="off">
   </div>
 
   <div class="field">
@@ -217,10 +217,15 @@ hr.sep{border:0;border-top:1px solid var(--navy-600);margin:22px 0}
     <div class="chips" id="f-cond"></div>
   </div>
 
+  <div class="field">
+    <label>ジャンル</label>
+    <div class="chips" id="f-genre"></div>
+  </div>
+
   <div class="row">
     <div class="field">
       <label for="f-cost">仕入値</label>
-      <input type="number" id="f-cost" inputmode="numeric" placeholder="3500">
+      <input type="number" id="f-cost" inputmode="numeric" placeholder="0">
     </div>
     <div class="field">
       <label for="f-ship">送料見込み</label>
@@ -248,7 +253,7 @@ hr.sep{border:0;border-top:1px solid var(--navy-600);margin:22px 0}
 
   <div class="field">
     <label for="f-note">メモ</label>
-    <input type="text" id="f-note" placeholder="まんだらけ 3F / 箱スレ小" autocomplete="off">
+    <input type="text" id="f-note" placeholder="仕入先・気になった点" autocomplete="off">
   </div>
 
   <button class="btn" id="btn-save">台帳に記入する</button>
@@ -303,6 +308,26 @@ hr.sep{border:0;border-top:1px solid var(--navy-600);margin:22px 0}
   <hr class="sep">
 
   <div class="field">
+    <label for="t-genre">説明文のテンプレート</label>
+    <select id="t-genre"></select>
+  </div>
+  <div class="field">
+    <textarea id="t-body" rows="12" style="min-height:280px;font-size:14px;line-height:1.7"></textarea>
+    <p class="note" style="margin-top:8px">使える差し込み記号：<span class="mono">{商品名} {状態} {状態説明} {管理番号}</span><br>メモ欄は仕入先を書く場所なので、説明文には入りません。</p>
+  </div>
+
+  <div class="field">
+    <label for="c-cond">状態ごとの説明文</label>
+    <select id="c-cond"></select>
+  </div>
+  <div class="field">
+    <textarea id="c-body" rows="5" style="font-size:14px;line-height:1.7"></textarea>
+  </div>
+  <button class="btn ghost" id="t-reset">テンプレートを初期状態に戻す</button>
+
+  <hr class="sep">
+
+  <div class="field">
     <label>符丁の読み方</label>
     <div class="calc mono" style="text-align:center;font-size:15px;letter-spacing:.2em" id="s-table"></div>
   </div>
@@ -339,16 +364,38 @@ hr.sep{border:0;border-top:1px solid var(--navy-600);margin:22px 0}
 <script>
 "use strict";
 
+/* ---------------- 既定テンプレート ---------------- */
+var GENRES=["フィギュア","ゲーム","アケパーツ","共通"];
+var CONDS_D=["新品未開封","未使用に近い","開封品","中古"];
+var DEF_TPL={
+"フィギュア":"{商品名}\n\n■状態\n{状態}\n{状態説明}\n\n■発送について\n・緩衝材を使用し、箱ごと丁寧に梱包してお送りします。\n・平日は当日〜翌日発送を心がけております。\n\n■注意事項\n※お写真に写っているものが全てです。\n※完璧な美品をお求めの方、神経質な方はご購入をお控えください。\n\n#フィギュア #アニメグッズ\n\n{管理番号}",
+"ゲーム":"{商品名}\n\n■状態\n{状態}\n{状態説明}\n※動作確認済みです。\n\n■発送について\n・防水対策のうえ、丁寧に梱包して発送いたします。\n・平日は当日〜翌日発送を心がけております。\n\n■注意事項\n※中古品のため、ディスク・カートリッジや説明書に使用感がある場合があります。\n※お写真に写っているものが全てです。\n\n#ゲームソフト #レトロゲーム\n\n{管理番号}",
+"アケパーツ":"{商品名}\n\n■商品について\n三和電子・セイミツ工業の正規取扱ルートより入手した純正品です。\n\n■状態\n{状態}\n{状態説明}\n\n■発送について\n・緩衝材を使用し、丁寧に梱包して発送いたします。\n・平日は当日〜翌日発送を心がけております。\n\n■注意事項\n※お写真に写っているものが全てです。\n\n#アーケード #三和電子 #セイミツ工業 #アケコン\n\n{管理番号}",
+"共通":"{商品名}\n\n■状態\n{状態}\n{状態説明}\n\n■発送について\n・緩衝材を使用し、丁寧に梱包して発送いたします。\n・平日は当日〜翌日発送を心がけております。\n\n■注意事項\n※お写真に写っているものが全てです。\n\n{管理番号}"
+};
+var DEF_COND={
+"新品未開封":"未開封の新品です。長期保管品の場合、外箱に多少のスレ・小キズ・日焼けがあることがあります。お写真にてご確認ください。\n※未開封のため内容物の検品は行っておりません。",
+"未使用に近い":"開封済みですが、ほぼ未使用の状態です。目立つ傷や汚れはございません。",
+"開封品":"開封品です。同梱物は揃っております。外箱に多少のスレ・小キズがある場合があります。お写真にてご確認ください。",
+"中古":"中古品です。使用に伴う傷や汚れがある場合があります。お写真にてご確認ください。"
+};
+
 /* ---------------- storage ---------------- */
 var KEY="fucho_ledger_v1";
 var mem=null;
 function load(){
   if(mem)return mem;
-  var d={items:[],cfg:{margin:20,fee:10,ship:700,mult:1.6,prefix:"OT",offset:0,shelf:"A",cond:"新品未開封"}};
+  var d={items:[],cfg:{margin:20,fee:10,ship:700,mult:1.6,prefix:"OT",offset:0,shelf:"A",cond:"新品未開封",
+    genre:"フィギュア",templates:{},condText:{}}};
   try{
     var raw=localStorage.getItem(KEY);
     if(raw){var p=JSON.parse(raw);d.items=p.items||[];for(var k in p.cfg||{})d.cfg[k]=p.cfg[k];}
   }catch(e){}
+  if(!d.cfg.templates)d.cfg.templates={};
+  if(!d.cfg.condText)d.cfg.condText={};
+  GENRES.forEach(function(g){if(!d.cfg.templates[g])d.cfg.templates[g]=DEF_TPL[g];});
+  CONDS_D.forEach(function(c){if(!d.cfg.condText[c])d.cfg.condText[c]=DEF_COND[c];});
+  if(!d.cfg.genre)d.cfg.genre="フィギュア";
   mem=d;return d;
 }
 function save(){
@@ -398,6 +445,16 @@ function nextSku(shelf){
   load().items.forEach(function(it){var m=rx.exec(it.sku);if(m)max=Math.max(max,+m[1]);});
   return c.prefix+"-"+shelf+String(max+1).padStart(3,"0");
 }
+function buildDesc(it){
+  var c=load().cfg;
+  var tpl=(c.templates&&c.templates[it.genre])||DEF_TPL[it.genre]||DEF_TPL["共通"];
+  var ct=(c.condText&&c.condText[it.cond])||DEF_COND[it.cond]||"";
+  return tpl.replace(/\{商品名\}/g,it.name)
+            .replace(/\{状態\}/g,it.cond||"")
+            .replace(/\{状態説明\}/g,ct)
+            .replace(/\{管理番号\}/g,codeLine(it))
+            .replace(/\n{3,}/g,"\n\n").trim();
+}
 function codeLine(it){
   return "※管理番号："+it.sku+"-"+ymd6(it.listDate)+"-"+enc(it.cost)+"-"+enc(it.floor);
 }
@@ -434,15 +491,17 @@ function chipset(host,vals,cur,onPick){
 }
 
 /* ---------------- 登録 ---------------- */
-var CONDS=["新品未開封","未使用に近い","開封品","中古"];
+var CONDS=CONDS_D;
 var SHELVES=["A","B","C","D","E"];
-var draft={cond:null,shelf:null};
+var draft={cond:null,shelf:null,genre:null};
 
 function renderAdd(){
   var c=load().cfg;
   if(!draft.cond)draft.cond=c.cond;
   if(!draft.shelf)draft.shelf=c.shelf;
+  if(!draft.genre)draft.genre=c.genre;
   chipset($("f-cond"),CONDS,draft.cond,function(v){draft.cond=v;renderAdd();});
+  chipset($("f-genre"),GENRES,draft.genre,function(v){draft.genre=v;renderAdd();});
   chipset($("f-shelf"),SHELVES,draft.shelf,function(v){draft.shelf=v;renderAdd();});
   if($("f-ship").value==="")$("f-ship").value=c.ship;
   recalc();
@@ -469,13 +528,13 @@ $("btn-save").onclick=function(){
   if(!cost){toast("仕入値を入れてください");$("f-cost").focus();return;}
   var ship=$("f-ship").value===""?load().cfg.ship:+$("f-ship").value;
   var it={
-    sku:nextSku(draft.shelf),name:name,cond:draft.cond,cost:cost,
+    sku:nextSku(draft.shelf),name:name,cond:draft.cond,genre:draft.genre,cost:cost,
     listDate:today(),price:+$("f-price").value||0,floor:floorPrice(cost,ship),
     ship:ship,status:"出品中",note:$("f-note").value.trim(),
     soldDate:"",soldPrice:0,fee:0
   };
   load().items.push(it);
-  load().cfg.shelf=draft.shelf;load().cfg.cond=draft.cond;
+  load().cfg.shelf=draft.shelf;load().cfg.cond=draft.cond;load().cfg.genre=draft.genre;
   save();
   showTag(it);
   $("f-name").value="";$("f-cost").value="";$("f-note").value="";
@@ -486,21 +545,29 @@ $("btn-save").onclick=function(){
 
 function showTag(it){
   var line=codeLine(it);
+  var desc=buildDesc(it);
   var w=$("tag-wrap");
   w.innerHTML="";
+
   var b=document.createElement("button");
   b.type="button";b.className="tag";
-  b.innerHTML='<span class="cap">'+it.sku+' ／ '+it.name.replace(/</g,"&lt;")+'</span>'+
+  b.innerHTML='<span class="cap">'+it.sku+' ／ '+it.genre+' ／ '+it.cond+'</span>'+
               '<span class="code mono"></span>'+
-              '<span class="hint">タップして商品説明の最終行に貼る</span>';
+              '<span class="hint">タップして説明文をまるごとコピー</span>';
   b.querySelector(".code").textContent=line;
   b.onclick=function(){
-    copy(line,function(){
+    copy(desc,function(){
       b.classList.add("copied");
-      b.querySelector(".hint").textContent="コピーしました　メルカリの説明文末尾に貼れます";
+      b.querySelector(".hint").textContent="コピーしました　メルカリの説明欄に貼れます";
     });
   };
   w.appendChild(b);
+
+  var sub=document.createElement("button");
+  sub.type="button";sub.className="btn ghost";sub.style.marginTop="10px";
+  sub.textContent="管理番号だけコピーする";
+  sub.onclick=function(){copy(line,function(){toast("管理番号をコピーしました");});};
+  w.appendChild(sub);
 }
 
 /* ---------------- 一覧 ---------------- */
@@ -549,7 +616,7 @@ $("l-q").addEventListener("input",renderList);
 function openSheet(sku){
   var it=load().items.filter(function(i){return i.sku===sku;})[0];
   if(!it)return;
-  var h='<h2></h2><div class="sk mono">'+it.sku+' ／ '+it.cond+' ／ '+it.listDate+'</div>'+
+  var h='<h2></h2><div class="sk mono">'+it.sku+' ／ '+(it.genre||"共通")+' ／ '+it.cond+' ／ '+it.listDate+'</div>'+
         '<div class="calc"><dl>'+
         '<dt>仕入値</dt><dd>'+yen(it.cost)+'</dd>'+
         '<dt>下限価格</dt><dd class="floor">'+yen(it.floor)+'</dd>'+
@@ -558,7 +625,8 @@ function openSheet(sku){
         '</dl></div>';
   if(it.note)h+='<p class="note">'+it.note.replace(/</g,"&lt;")+'</p>';
   h+='<div class="actions">'+
-     '<button class="btn" id="sh-copy">符丁をコピーする</button>';
+     '<button class="btn" id="sh-desc">説明文をコピーする</button>'+
+     '<button class="btn ghost" id="sh-copy">管理番号だけコピーする</button>';
   if(it.status==="出品中"){
     h+='<button class="btn ghost" id="sh-price">出品価格を書き換える</button>'+
        '<button class="btn ghost" id="sh-sold">売れたことにする</button>';
@@ -569,7 +637,8 @@ function openSheet(sku){
   $("sheet-body").innerHTML=h;
   $("sheet-body").querySelector("h2").textContent=it.name;
 
-  $("sh-copy").onclick=function(){copy(codeLine(it),function(){toast("符丁をコピーしました");});};
+  $("sh-desc").onclick=function(){copy(buildDesc(it),function(){toast("説明文をコピーしました");});};
+  $("sh-copy").onclick=function(){copy(codeLine(it),function(){toast("管理番号をコピーしました");});};
   if($("sh-price"))$("sh-price").onclick=function(){
     var v=prompt("新しい出品価格（下限 "+yen(it.floor)+"）",it.price);
     if(v===null)return;
@@ -603,9 +672,25 @@ $("scrim").onclick=closeSheet;
 
 /* ---------------- 設定 ---------------- */
 var CFGMAP={"s-margin":"margin","s-fee":"fee","s-ship":"ship","s-mult":"mult","s-prefix":"prefix","s-offset":"offset"};
+function fillSelect(el,vals,cur){
+  el.innerHTML="";
+  vals.forEach(function(v){
+    var o=document.createElement("option");
+    o.value=v;o.textContent=v;if(v===cur)o.selected=true;
+    el.appendChild(o);
+  });
+}
+function renderTpl(){
+  var c=load().cfg;
+  if(!$("t-genre").value)fillSelect($("t-genre"),GENRES,c.genre);
+  if(!$("c-cond").value)fillSelect($("c-cond"),CONDS_D,c.cond);
+  $("t-body").value=c.templates[$("t-genre").value]||"";
+  $("c-body").value=c.condText[$("c-cond").value]||"";
+}
 function renderSet(){
   var c=load().cfg;
   for(var id in CFGMAP)$(id).value=c[CFGMAP[id]];
+  renderTpl();
   var t="";
   for(var i=1;i<=9;i++)t+=i+"="+FUCHO.charAt(i)+"　";
   t+="0="+FUCHO.charAt(0);
@@ -619,6 +704,20 @@ Object.keys(CFGMAP).forEach(function(id){
     load().cfg[k]=v;save();recalc();toast("設定を保存しました");
   });
 });
+$("t-genre").addEventListener("change",renderTpl);
+$("c-cond").addEventListener("change",renderTpl);
+$("t-body").addEventListener("change",function(){
+  load().cfg.templates[$("t-genre").value]=this.value;save();toast("テンプレートを保存しました");
+});
+$("c-body").addEventListener("change",function(){
+  load().cfg.condText[$("c-cond").value]=this.value;save();toast("状態の説明文を保存しました");
+});
+$("t-reset").onclick=function(){
+  if(!confirm("編集したテンプレートを初期状態に戻します。よろしいですか？"))return;
+  GENRES.forEach(function(g){load().cfg.templates[g]=DEF_TPL[g];});
+  CONDS_D.forEach(function(c){load().cfg.condText[c]=DEF_COND[c];});
+  save();renderTpl();toast("初期状態に戻しました");
+};
 $("s-dec").addEventListener("input",function(){
   var v=dec(this.value);
   $("s-dec-out").textContent=v===null?"":this.value.toUpperCase()+" は "+yen(v);
@@ -632,12 +731,12 @@ function download(name,text,type){
   setTimeout(function(){URL.revokeObjectURL(a.href);document.body.removeChild(a);},1000);
 }
 $("s-export").onclick=function(){
-  var head=["管理番号","商品名","状態","仕入値","出品日","出品価格","下限価格","販路","URL","ステータス","売却日","売却価格","手数料","送料","備考","符丁"];
+  var head=["管理番号","商品名","状態","仕入値","出品日","出品価格","下限価格","販路","URL","ステータス","売却日","売却価格","手数料","送料","備考","ジャンル","符丁"];
   var esc=function(v){v=(v==null?"":String(v));return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;};
   var lines=[head.join(",")];
   load().items.forEach(function(i){
     lines.push([i.sku,i.name,i.cond,i.cost,i.listDate,i.price,i.floor,"メルカリ","",
-                i.status,i.soldDate,i.soldPrice,i.fee,i.ship,i.note,enc(i.cost)].map(esc).join(","));
+                i.status,i.soldDate,i.soldPrice,i.fee,i.ship,i.note,i.genre||"",enc(i.cost)].map(esc).join(","));
   });
   download("棚卸し_"+today().replace(/-/g,"")+".csv","\ufeff"+lines.join("\r\n"),"text/csv;charset=utf-8");
   toast("CSVを書き出しました");
