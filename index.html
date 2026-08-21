@@ -617,7 +617,9 @@ function showTag(it){
   b.onclick=function(){
     copy(desc,function(){
       b.classList.add("copied");
-      b.querySelector(".hint").textContent="コピーしました　メルカリの説明欄に貼れます";
+      var pl=it.platform||"メルカリ";
+      var where=(pl==="ヤフオク")?"ヤフオクの商品説明欄":(pl==="メルカリShops")?"メルカリShopsの商品説明欄":"メルカリの説明欄";
+      b.querySelector(".hint").textContent="コピーしました　"+where+"に貼れます";
     });
   };
   w.appendChild(b);
