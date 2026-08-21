@@ -63,6 +63,8 @@ input:focus,textarea:focus,select:focus{outline:2px solid var(--asagi);outline-o
 textarea{min-height:64px;resize:vertical}
 
 .chips{display:flex;flex-wrap:wrap;gap:8px}
+.chips.g5{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.chips.g5 .chip{min-width:0;padding:13px 2px}
 .chip{
   flex:1 1 auto;min-width:74px;text-align:center;
   background:var(--navy-700);border:1px solid var(--navy-600);
@@ -182,7 +184,7 @@ nav button[aria-selected=true] span{color:var(--shu)}
 
 /* ---------- toast ---------- */
 #toast{
-  position:fixed;left:50%;bottom:calc(92px + var(--safe-b));transform:translateX(-50%) translateY(14px);
+  position:fixed;left:50%;bottom:calc(108px + var(--safe-b));transform:translateX(-50%) translateY(14px);
   background:var(--paper);color:var(--sumi);padding:11px 20px;border-radius:999px;
   font-size:13.5px;font-weight:700;z-index:60;opacity:0;pointer-events:none;
   transition:opacity .18s,transform .18s;white-space:nowrap;max-width:90vw;
@@ -228,7 +230,7 @@ hr.sep{border:0;border-top:1px solid var(--navy-600);margin:22px 0}
 
   <div class="field">
     <label>棚</label>
-    <div class="chips" id="f-shelf"></div>
+    <div class="chips g5" id="f-shelf"></div>
   </div>
 
   <div class="calc">
@@ -495,8 +497,7 @@ function showTag(it){
   b.onclick=function(){
     copy(line,function(){
       b.classList.add("copied");
-      b.querySelector(".hint").textContent="コピーしました";
-      toast("符丁をコピーしました");
+      b.querySelector(".hint").textContent="コピーしました　メルカリの説明文末尾に貼れます";
     });
   };
   w.appendChild(b);
