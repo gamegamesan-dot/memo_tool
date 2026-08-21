@@ -563,11 +563,17 @@ function showTag(it){
   };
   w.appendChild(b);
 
-  var sub=document.createElement("button");
-  sub.type="button";sub.className="btn ghost";sub.style.marginTop="10px";
-  sub.textContent="管理番号だけコピーする";
-  sub.onclick=function(){copy(line,function(){toast("管理番号をコピーしました");});};
-  w.appendChild(sub);
+  var row=document.createElement("div");
+  row.className="row";row.style.marginTop="10px";
+  [["商品名をコピー",it.name,"商品名をコピーしました"],
+   ["管理番号をコピー",line,"管理番号をコピーしました"]].forEach(function(a){
+    var x=document.createElement("button");
+    x.type="button";x.className="btn ghost";x.style.fontSize="14px";x.style.padding="14px 6px";
+    x.textContent=a[0];
+    x.onclick=function(){copy(a[1],function(){toast(a[2]);});};
+    row.appendChild(x);
+  });
+  w.appendChild(row);
 }
 
 /* ---------------- 一覧 ---------------- */
@@ -626,7 +632,8 @@ function openSheet(sku){
   if(it.note)h+='<p class="note">'+it.note.replace(/</g,"&lt;")+'</p>';
   h+='<div class="actions">'+
      '<button class="btn" id="sh-desc">説明文をコピーする</button>'+
-     '<button class="btn ghost" id="sh-copy">管理番号だけコピーする</button>';
+     '<button class="btn ghost" id="sh-name">商品名をコピーする</button>'+
+     '<button class="btn ghost" id="sh-copy">管理番号をコピーする</button>';
   if(it.status==="出品中"){
     h+='<button class="btn ghost" id="sh-price">出品価格を書き換える</button>'+
        '<button class="btn ghost" id="sh-sold">売れたことにする</button>';
@@ -638,6 +645,7 @@ function openSheet(sku){
   $("sheet-body").querySelector("h2").textContent=it.name;
 
   $("sh-desc").onclick=function(){copy(buildDesc(it),function(){toast("説明文をコピーしました");});};
+  $("sh-name").onclick=function(){copy(it.name,function(){toast("商品名をコピーしました");});};
   $("sh-copy").onclick=function(){copy(codeLine(it),function(){toast("管理番号をコピーしました");});};
   if($("sh-price"))$("sh-price").onclick=function(){
     var v=prompt("新しい出品価格（下限 "+yen(it.floor)+"）",it.price);
