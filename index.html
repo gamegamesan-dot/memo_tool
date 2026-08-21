@@ -3,12 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
-<title>符丁台帳</title>
+<title>出品台帳</title>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="符丁台帳">
+<meta name="apple-mobile-web-app-title" content="出品台帳">
 <meta name="theme-color" content="#12203C">
-<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' fill='%2312203C'/%3E%3Ctext x='90' y='118' font-size='96' font-family='sans-serif' font-weight='700' fill='%23F2EDE3' text-anchor='middle'%3E符%3C/text%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' fill='%2312203C'/%3E%3Ctext x='90' y='118' font-size='96' font-family='sans-serif' font-weight='700' fill='%23F2EDE3' text-anchor='middle'%3E出%3C/text%3E%3C/svg%3E">
 <style>
 :root{
   --navy-900:#0E1A31;
@@ -199,7 +199,7 @@ hr.sep{border:0;border-top:1px solid var(--navy-600);margin:22px 0}
 <body>
 
 <header>
-  <h1>符丁台帳</h1>
+  <h1>出品台帳</h1>
   <span class="sub" id="hcount"></span>
 </header>
 
@@ -215,6 +215,11 @@ hr.sep{border:0;border-top:1px solid var(--navy-600);margin:22px 0}
   <div class="field">
     <label>状態</label>
     <div class="chips" id="f-cond"></div>
+  </div>
+
+  <div class="field">
+    <label>販路</label>
+    <div class="chips" id="f-plat"></div>
   </div>
 
   <div class="field">
@@ -279,7 +284,8 @@ hr.sep{border:0;border-top:1px solid var(--navy-600);margin:22px 0}
       <input type="number" id="s-margin" inputmode="numeric">
     </div>
     <div class="field">
-      <label for="s-fee">販売手数料 %</label>
+      <label for="s-feeplat">販路ごとの手数料 %</label>
+      <select id="s-feeplat" style="margin-bottom:8px"></select>
       <input type="number" id="s-fee" inputmode="numeric">
     </div>
   </div>
@@ -299,21 +305,32 @@ hr.sep{border:0;border-top:1px solid var(--navy-600);margin:22px 0}
       <input type="text" id="s-prefix" autocomplete="off">
     </div>
     <div class="field">
-      <label for="s-offset">符丁オフセット</label>
+      <label for="s-offset">コードのずらし数</label>
       <input type="number" id="s-offset" inputmode="numeric">
     </div>
   </div>
-  <p class="note">オフセットは仕入値に足してから符丁化する数です。0以外にすると同一商品の値動きから原価を推測されなくなります。途中で変えると既に貼った符丁と読み方がずれるので、運用開始前に決めてください。</p>
+  <p class="note">この数を仕入値に足してからコード化します。0以外にすると同一商品の値動きから原価を推測されなくなります。途中で変えると既に貼ったコードと読み方がずれるので、運用開始前に決めてください。</p>
 
   <hr class="sep">
 
   <div class="field">
-    <label for="t-genre">説明文のテンプレート</label>
+    <label for="t-genre">説明文のテンプレート（販路ごと）</label>
     <select id="t-genre"></select>
   </div>
   <div class="field">
     <textarea id="t-body" rows="12" style="min-height:280px;font-size:14px;line-height:1.7"></textarea>
-    <p class="note" style="margin-top:8px">使える差し込み記号：<span class="mono">{商品名} {状態} {状態説明} {管理番号}</span><br>メモ欄は仕入先を書く場所なので、説明文には入りません。</p>
+    <p class="note" style="margin-top:8px">差し込み記号：<span class="mono">{商品名} {状態} {状態説明} {ジャンル説明} {ハッシュタグ} {管理番号}</span><br>メモ欄は仕入先を書く場所なので、説明文には入りません。</p>
+  </div>
+
+  <div class="field">
+    <label for="g-genre">ジャンルごとの一文とタグ</label>
+    <select id="g-genre"></select>
+  </div>
+  <div class="field">
+    <textarea id="g-body" rows="3" style="font-size:14px;line-height:1.7"></textarea>
+  </div>
+  <div class="field">
+    <input type="text" id="g-tag" placeholder="#タグ #タグ" autocomplete="off">
   </div>
 
   <div class="field">
@@ -328,11 +345,11 @@ hr.sep{border:0;border-top:1px solid var(--navy-600);margin:22px 0}
   <hr class="sep">
 
   <div class="field">
-    <label>符丁の読み方</label>
+    <label>コードの読み方</label>
     <div class="calc mono" style="text-align:center;font-size:15px;letter-spacing:.2em" id="s-table"></div>
   </div>
   <div class="field">
-    <label for="s-dec">符丁を解読する</label>
+    <label for="s-dec">コードを解読する</label>
     <input type="text" id="s-dec" placeholder="ENTT" autocomplete="off" style="text-transform:uppercase">
     <p class="note" id="s-dec-out" style="margin-top:8px"></p>
   </div>
@@ -365,14 +382,33 @@ hr.sep{border:0;border-top:1px solid var(--navy-600);margin:22px 0}
 "use strict";
 
 /* ---------------- 既定テンプレート ---------------- */
+var PLATS=["メルカリ","メルカリShops","ヤフオク"];
 var GENRES=["フィギュア","ゲーム","アケパーツ","共通"];
 var CONDS_D=["新品未開封","未使用に近い","開封品","中古"];
+var DEF_FEE={"メルカリ":10,"メルカリShops":10,"ヤフオク":10};
+
 var DEF_TPL={
-"フィギュア":"{商品名}\n\n■状態\n{状態}\n{状態説明}\n\n■発送について\n・緩衝材を使用し、箱ごと丁寧に梱包してお送りします。\n・平日は当日〜翌日発送を心がけております。\n\n■注意事項\n※お写真に写っているものが全てです。\n※完璧な美品をお求めの方、神経質な方はご購入をお控えください。\n\n#フィギュア #アニメグッズ\n\n{管理番号}",
-"ゲーム":"{商品名}\n\n■状態\n{状態}\n{状態説明}\n※動作確認済みです。\n\n■発送について\n・防水対策のうえ、丁寧に梱包して発送いたします。\n・平日は当日〜翌日発送を心がけております。\n\n■注意事項\n※中古品のため、ディスク・カートリッジや説明書に使用感がある場合があります。\n※お写真に写っているものが全てです。\n\n#ゲームソフト #レトロゲーム\n\n{管理番号}",
-"アケパーツ":"{商品名}\n\n■商品について\n三和電子・セイミツ工業の正規取扱ルートより入手した純正品です。\n\n■状態\n{状態}\n{状態説明}\n\n■発送について\n・緩衝材を使用し、丁寧に梱包して発送いたします。\n・平日は当日〜翌日発送を心がけております。\n\n■注意事項\n※お写真に写っているものが全てです。\n\n#アーケード #三和電子 #セイミツ工業 #アケコン\n\n{管理番号}",
-"共通":"{商品名}\n\n■状態\n{状態}\n{状態説明}\n\n■発送について\n・緩衝材を使用し、丁寧に梱包して発送いたします。\n・平日は当日〜翌日発送を心がけております。\n\n■注意事項\n※お写真に写っているものが全てです。\n\n{管理番号}"
+"メルカリ":"{商品名}\n\n■状態\n{状態}\n{状態説明}\n{ジャンル説明}\n\n■発送について\n・緩衝材を使用し、丁寧に梱包してお送りします。\n・平日は当日〜翌日発送を心がけております。\n\n■注意事項\n※お写真に写っているものが全てです。\n※完璧な美品をお求めの方、神経質な方はご購入をお控えください。\n\n{ハッシュタグ}\n\n{管理番号}",
+
+"メルカリShops":"{商品名}\n\n■商品について\n秋葉原で古物商許可を受けた事業者が出品しております（東京都公安委員会 第305511207538号）。\n\n■状態\n{状態}\n{状態説明}\n{ジャンル説明}\n\n■発送について\n・緩衝材を使用し、丁寧に梱包して発送いたします。\n・平日は当日〜翌日発送を心がけております。\n\n■注意事項\n※お写真に写っているものが全てです。\n※初期不良を除き、返品はお受けいたしかねます。\n\n{ハッシュタグ}\n\n{管理番号}",
+
+"ヤフオク":"{商品名}\n\n■商品について\n秋葉原で古物商許可を受けた事業者が出品しております（東京都公安委員会 第305511207538号）。\n\n■状態\n{状態}\n{状態説明}\n{ジャンル説明}\n\n■発送について\n・落札後24時間以内にご連絡いたします。\n・緩衝材を使用し、丁寧に梱包して発送いたします。\n・複数落札の場合は同梱可能です。落札後にご相談ください。\n\n■お取引について\n・落札後3日以内にご連絡、5日以内にご入金をお願いいたします。\n・中古品につき、細かな傷や汚れを見落とす場合があります。\n・商品説明と著しく異なる場合を除き、返品はお受けいたしかねます。\n\n{管理番号}"
 };
+
+var DEF_GENRE={
+"フィギュア":"※付属パーツはお写真にてご確認ください。細かな部品は紛失しやすいため、開封・組立時はご注意ください。",
+"ゲーム":"※ディスク・カートリッジや説明書に使用感がある場合があります。",
+"アケパーツ":"※三和電子・セイミツ工業の正規取扱ルートより入手した純正品です。",
+"共通":""
+};
+
+var DEF_TAG={
+"フィギュア":"#フィギュア #アニメグッズ",
+"ゲーム":"#ゲームソフト #レトロゲーム",
+"アケパーツ":"#アーケード #三和電子 #セイミツ工業 #アケコン",
+"共通":""
+};
+
 var DEF_COND={
 "新品未開封":"未開封の新品です。長期保管品の場合、外箱に多少のスレ・小キズ・日焼けがあることがあります。お写真にてご確認ください。\n※未開封のため内容物の検品は行っておりません。",
 "未使用に近い":"開封済みですが、ほぼ未使用の状態です。目立つ傷や汚れはございません。",
@@ -386,16 +422,28 @@ var mem=null;
 function load(){
   if(mem)return mem;
   var d={items:[],cfg:{margin:20,fee:10,ship:700,mult:1.6,prefix:"OT",offset:0,shelf:"A",cond:"新品未開封",
-    genre:"フィギュア",templates:{},condText:{}}};
+    genre:"フィギュア",plat:"メルカリ",tplVer:2,fees:{},templates:{},genreText:{},tagText:{},condText:{}}};
   try{
     var raw=localStorage.getItem(KEY);
     if(raw){var p=JSON.parse(raw);d.items=p.items||[];for(var k in p.cfg||{})d.cfg[k]=p.cfg[k];}
   }catch(e){}
+  if(d.cfg.tplVer!==2){ d.cfg.templates={}; d.cfg.tplVer=2; }
   if(!d.cfg.templates)d.cfg.templates={};
+  if(!d.cfg.genreText)d.cfg.genreText={};
+  if(!d.cfg.tagText)d.cfg.tagText={};
   if(!d.cfg.condText)d.cfg.condText={};
-  GENRES.forEach(function(g){if(!d.cfg.templates[g])d.cfg.templates[g]=DEF_TPL[g];});
+  if(!d.cfg.fees)d.cfg.fees={};
+  PLATS.forEach(function(x){
+    if(!d.cfg.templates[x])d.cfg.templates[x]=DEF_TPL[x];
+    if(d.cfg.fees[x]==null)d.cfg.fees[x]=DEF_FEE[x];
+  });
+  GENRES.forEach(function(g){
+    if(d.cfg.genreText[g]==null)d.cfg.genreText[g]=DEF_GENRE[g];
+    if(d.cfg.tagText[g]==null)d.cfg.tagText[g]=DEF_TAG[g];
+  });
   CONDS_D.forEach(function(c){if(!d.cfg.condText[c])d.cfg.condText[c]=DEF_COND[c];});
   if(!d.cfg.genre)d.cfg.genre="フィギュア";
+  if(!d.cfg.plat)d.cfg.plat="メルカリ";
   mem=d;return d;
 }
 function save(){
@@ -425,15 +473,19 @@ function dec(code){
 }
 
 /* ---------------- 計算 ---------------- */
-function floorPrice(cost,ship){
+function feeOf(plat){
   var c=load().cfg;
-  var denom=(100-c.fee-c.margin)/100;
+  var v=c.fees&&c.fees[plat];
+  return (v==null?c.fee:v);
+}
+function floorPrice(cost,ship,plat){
+  var c=load().cfg;
+  var denom=(100-feeOf(plat)-c.margin)/100;
   if(denom<=0)return 0;
   return Math.ceil((cost+ship)/denom/100)*100;
 }
-function netAt(price,cost,ship){
-  var c=load().cfg;
-  return Math.round(price-price*c.fee/100-ship-cost);
+function netAt(price,cost,ship,plat){
+  return Math.round(price-price*feeOf(plat)/100-ship-cost);
 }
 function yen(n){return (n<0?"-":"")+"¥"+Math.abs(Math.round(n)).toLocaleString("ja-JP");}
 function today(){var d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
@@ -447,11 +499,16 @@ function nextSku(shelf){
 }
 function buildDesc(it){
   var c=load().cfg;
-  var tpl=(c.templates&&c.templates[it.genre])||DEF_TPL[it.genre]||DEF_TPL["共通"];
+  var pl=it.platform||"メルカリ";
+  var tpl=(c.templates&&c.templates[pl])||DEF_TPL[pl]||DEF_TPL["メルカリ"];
   var ct=(c.condText&&c.condText[it.cond])||DEF_COND[it.cond]||"";
+  var gt=(c.genreText&&c.genreText[it.genre])||"";
+  var tg=(c.tagText&&c.tagText[it.genre])||"";
   return tpl.replace(/\{商品名\}/g,it.name)
             .replace(/\{状態\}/g,it.cond||"")
             .replace(/\{状態説明\}/g,ct)
+            .replace(/\{ジャンル説明\}/g,gt)
+            .replace(/\{ハッシュタグ\}/g,tg)
             .replace(/\{管理番号\}/g,codeLine(it))
             .replace(/\n{3,}/g,"\n\n").trim();
 }
@@ -493,13 +550,15 @@ function chipset(host,vals,cur,onPick){
 /* ---------------- 登録 ---------------- */
 var CONDS=CONDS_D;
 var SHELVES=["A","B","C","D","E"];
-var draft={cond:null,shelf:null,genre:null};
+var draft={cond:null,shelf:null,genre:null,plat:null};
 
 function renderAdd(){
   var c=load().cfg;
   if(!draft.cond)draft.cond=c.cond;
   if(!draft.shelf)draft.shelf=c.shelf;
   if(!draft.genre)draft.genre=c.genre;
+  if(!draft.plat)draft.plat=c.plat;
+  chipset($("f-plat"),PLATS,draft.plat,function(v){draft.plat=v;renderAdd();});
   chipset($("f-cond"),CONDS,draft.cond,function(v){draft.cond=v;renderAdd();});
   chipset($("f-genre"),GENRES,draft.genre,function(v){draft.genre=v;renderAdd();});
   chipset($("f-shelf"),SHELVES,draft.shelf,function(v){draft.shelf=v;renderAdd();});
@@ -511,11 +570,11 @@ function recalc(){
   var ship=+$("f-ship").value;
   if($("f-ship").value==="")ship=load().cfg.ship;
   if(!cost){$("c-floor").textContent="—";$("c-start").textContent="—";$("c-gain").textContent="—";return;}
-  var f=floorPrice(cost,ship);
+  var f=floorPrice(cost,ship,draft.plat);
   var start=Math.ceil(f*load().cfg.mult/100)*100;
   $("c-floor").textContent=yen(f);
   $("c-start").textContent=yen(start);
-  $("c-gain").textContent=yen(netAt(f,cost,ship));
+  $("c-gain").textContent=yen(netAt(f,cost,ship,draft.plat));
   if(!$("f-price").dataset.touched)$("f-price").value=start;
 }
 ["f-cost","f-ship"].forEach(function(id){$(id).addEventListener("input",recalc);});
@@ -529,12 +588,12 @@ $("btn-save").onclick=function(){
   var ship=$("f-ship").value===""?load().cfg.ship:+$("f-ship").value;
   var it={
     sku:nextSku(draft.shelf),name:name,cond:draft.cond,genre:draft.genre,cost:cost,
-    listDate:today(),price:+$("f-price").value||0,floor:floorPrice(cost,ship),
-    ship:ship,status:"出品中",note:$("f-note").value.trim(),
+    listDate:today(),price:+$("f-price").value||0,floor:floorPrice(cost,ship,draft.plat),
+    ship:ship,platform:draft.plat,status:"出品中",note:$("f-note").value.trim(),
     soldDate:"",soldPrice:0,fee:0
   };
   load().items.push(it);
-  load().cfg.shelf=draft.shelf;load().cfg.cond=draft.cond;load().cfg.genre=draft.genre;
+  load().cfg.shelf=draft.shelf;load().cfg.cond=draft.cond;load().cfg.genre=draft.genre;load().cfg.plat=draft.plat;
   save();
   showTag(it);
   $("f-name").value="";$("f-cost").value="";$("f-note").value="";
@@ -551,7 +610,7 @@ function showTag(it){
 
   var b=document.createElement("button");
   b.type="button";b.className="tag";
-  b.innerHTML='<span class="cap">'+it.sku+' ／ '+it.genre+' ／ '+it.cond+'</span>'+
+  b.innerHTML='<span class="cap">'+it.sku+' ／ '+(it.platform||"メルカリ")+' ／ '+it.genre+' ／ '+it.cond+'</span>'+
               '<span class="code mono"></span>'+
               '<span class="hint">タップして説明文をまるごとコピー</span>';
   b.querySelector(".code").textContent=line;
@@ -574,6 +633,12 @@ function showTag(it){
     row.appendChild(x);
   });
   w.appendChild(row);
+
+  var chk=document.createElement("p");
+  chk.className="note";
+  chk.style.cssText="margin-top:10px;text-align:center;letter-spacing:.06em";
+  chk.textContent="このコードの中身　仕入 "+yen(it.cost)+" ／ 下限 "+yen(it.floor)+"　（自分用の確認欄です）";
+  w.appendChild(chk);
 }
 
 /* ---------------- 一覧 ---------------- */
@@ -590,7 +655,7 @@ function renderList(){
   var live=load().items.filter(function(i){return i.status==="出品中";});
   var stock=live.reduce(function(s,i){return s+i.cost;},0);
   var profit=load().items.filter(function(i){return i.status==="売却済";})
-    .reduce(function(s,i){return s+netAt(i.soldPrice,i.cost,i.ship||0);},0);
+    .reduce(function(s,i){return s+netAt(i.soldPrice,i.cost,i.ship||0,i.platform);},0);
   $("l-sum").innerHTML="<div>在庫原価 <b>"+yen(stock)+"</b></div><div>累計手残り <b>"+yen(profit)+"</b></div>";
 
   var body=$("l-body");body.innerHTML="";
@@ -605,8 +670,8 @@ function renderList(){
     b.type="button";
     b.className="card"+(it.status==="売却済"?" sold":stale?" stale":"");
     var meta=it.status==="売却済"
-      ? it.soldDate+" ／ 売価 "+yen(it.soldPrice)+" ／ 手残り "+yen(netAt(it.soldPrice,it.cost,it.ship||0))
-      : it.listDate+" ／ 原価 "+yen(it.cost)+" ／ 下限 <b>"+yen(it.floor)+"</b>"+(stale?" ／ 90日超":"");
+      ? (it.platform||"メルカリ")+" ／ "+it.soldDate+" ／ 売価 "+yen(it.soldPrice)+" ／ 手残り "+yen(netAt(it.soldPrice,it.cost,it.ship||0,it.platform))
+      : (it.platform||"メルカリ")+" ／ 原価 "+yen(it.cost)+" ／ 下限 <b>"+yen(it.floor)+"</b>"+(stale?" ／ 90日超":"");
     b.innerHTML='<div class="top"><span class="sku mono"></span><span class="amt"></span></div>'+
                 '<div class="nm"></div><div class="meta">'+meta+'</div>';
     b.querySelector(".sku").textContent=it.sku;
@@ -622,13 +687,14 @@ $("l-q").addEventListener("input",renderList);
 function openSheet(sku){
   var it=load().items.filter(function(i){return i.sku===sku;})[0];
   if(!it)return;
-  var h='<h2></h2><div class="sk mono">'+it.sku+' ／ '+(it.genre||"共通")+' ／ '+it.cond+' ／ '+it.listDate+'</div>'+
+  var h='<h2></h2><div class="sk mono">'+it.sku+' ／ '+(it.platform||"メルカリ")+' ／ '+(it.genre||"共通")+' ／ '+it.cond+'</div>'+
         '<div class="calc"><dl>'+
         '<dt>仕入値</dt><dd>'+yen(it.cost)+'</dd>'+
         '<dt>下限価格</dt><dd class="floor">'+yen(it.floor)+'</dd>'+
         '<dt>現在の出品価格</dt><dd>'+yen(it.price)+'</dd>'+
-        '<dt>今売れた時の手残り</dt><dd class="gain">'+yen(netAt(it.price,it.cost,it.ship||0))+'</dd>'+
+        '<dt>今売れた時の手残り</dt><dd class="gain">'+yen(netAt(it.price,it.cost,it.ship||0,it.platform))+'</dd>'+
         '</dl></div>';
+  h+='<p class="note" style="text-align:center">コードの中身　仕入 '+yen(it.cost)+' ／ 下限 '+yen(it.floor)+'</p>';
   if(it.note)h+='<p class="note">'+it.note.replace(/</g,"&lt;")+'</p>';
   h+='<div class="actions">'+
      '<button class="btn" id="sh-desc">説明文をコピーする</button>'+
@@ -659,9 +725,9 @@ function openSheet(sku){
     if(v===null)return;
     var n=parseInt(v,10);if(isNaN(n))return;
     it.status="売却済";it.soldPrice=n;it.soldDate=today();
-    it.fee=Math.round(n*load().cfg.fee/100);
+    it.fee=Math.round(n*feeOf(it.platform)/100);
     save();closeSheet();renderList();refreshCount();
-    toast("手残り "+yen(netAt(n,it.cost,it.ship||0)));
+    toast("手残り "+yen(netAt(n,it.cost,it.ship||0,it.platform)));
   };
   if($("sh-back"))$("sh-back").onclick=function(){
     it.status="出品中";it.soldPrice=0;it.soldDate="";save();
@@ -679,7 +745,7 @@ function closeSheet(){$("sheet").classList.remove("on");$("scrim").classList.rem
 $("scrim").onclick=closeSheet;
 
 /* ---------------- 設定 ---------------- */
-var CFGMAP={"s-margin":"margin","s-fee":"fee","s-ship":"ship","s-mult":"mult","s-prefix":"prefix","s-offset":"offset"};
+var CFGMAP={"s-margin":"margin","s-ship":"ship","s-mult":"mult","s-prefix":"prefix","s-offset":"offset"};
 function fillSelect(el,vals,cur){
   el.innerHTML="";
   vals.forEach(function(v){
@@ -690,10 +756,15 @@ function fillSelect(el,vals,cur){
 }
 function renderTpl(){
   var c=load().cfg;
-  if(!$("t-genre").value)fillSelect($("t-genre"),GENRES,c.genre);
+  if(!$("t-genre").value)fillSelect($("t-genre"),PLATS,c.plat);
+  if(!$("g-genre").value)fillSelect($("g-genre"),GENRES,c.genre);
   if(!$("c-cond").value)fillSelect($("c-cond"),CONDS_D,c.cond);
+  if(!$("s-feeplat").value)fillSelect($("s-feeplat"),PLATS,c.plat);
   $("t-body").value=c.templates[$("t-genre").value]||"";
+  $("g-body").value=c.genreText[$("g-genre").value]||"";
+  $("g-tag").value=c.tagText[$("g-genre").value]||"";
   $("c-body").value=c.condText[$("c-cond").value]||"";
+  $("s-fee").value=feeOf($("s-feeplat").value);
 }
 function renderSet(){
   var c=load().cfg;
@@ -712,7 +783,19 @@ Object.keys(CFGMAP).forEach(function(id){
     load().cfg[k]=v;save();recalc();toast("設定を保存しました");
   });
 });
+$("s-feeplat").addEventListener("change",renderTpl);
+$("s-fee").addEventListener("change",function(){
+  var v=parseFloat(this.value);if(isNaN(v))return;
+  load().cfg.fees[$("s-feeplat").value]=v;save();recalc();toast("手数料を保存しました");
+});
 $("t-genre").addEventListener("change",renderTpl);
+$("g-genre").addEventListener("change",renderTpl);
+$("g-body").addEventListener("change",function(){
+  load().cfg.genreText[$("g-genre").value]=this.value;save();toast("ジャンルの一文を保存しました");
+});
+$("g-tag").addEventListener("change",function(){
+  load().cfg.tagText[$("g-genre").value]=this.value;save();toast("タグを保存しました");
+});
 $("c-cond").addEventListener("change",renderTpl);
 $("t-body").addEventListener("change",function(){
   load().cfg.templates[$("t-genre").value]=this.value;save();toast("テンプレートを保存しました");
@@ -722,7 +805,8 @@ $("c-body").addEventListener("change",function(){
 });
 $("t-reset").onclick=function(){
   if(!confirm("編集したテンプレートを初期状態に戻します。よろしいですか？"))return;
-  GENRES.forEach(function(g){load().cfg.templates[g]=DEF_TPL[g];});
+  PLATS.forEach(function(x){load().cfg.templates[x]=DEF_TPL[x];});
+  GENRES.forEach(function(g){load().cfg.genreText[g]=DEF_GENRE[g];load().cfg.tagText[g]=DEF_TAG[g];});
   CONDS_D.forEach(function(c){load().cfg.condText[c]=DEF_COND[c];});
   save();renderTpl();toast("初期状態に戻しました");
 };
@@ -739,11 +823,11 @@ function download(name,text,type){
   setTimeout(function(){URL.revokeObjectURL(a.href);document.body.removeChild(a);},1000);
 }
 $("s-export").onclick=function(){
-  var head=["管理番号","商品名","状態","仕入値","出品日","出品価格","下限価格","販路","URL","ステータス","売却日","売却価格","手数料","送料","備考","ジャンル","符丁"];
+  var head=["管理番号","商品名","状態","仕入値","出品日","出品価格","下限価格","販路","URL","ステータス","売却日","売却価格","手数料","送料","備考","ジャンル","コード"];
   var esc=function(v){v=(v==null?"":String(v));return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;};
   var lines=[head.join(",")];
   load().items.forEach(function(i){
-    lines.push([i.sku,i.name,i.cond,i.cost,i.listDate,i.price,i.floor,"メルカリ","",
+    lines.push([i.sku,i.name,i.cond,i.cost,i.listDate,i.price,i.floor,i.platform||"メルカリ","",
                 i.status,i.soldDate,i.soldPrice,i.fee,i.ship,i.note,i.genre||"",enc(i.cost)].map(esc).join(","));
   });
   download("棚卸し_"+today().replace(/-/g,"")+".csv","\ufeff"+lines.join("\r\n"),"text/csv;charset=utf-8");
@@ -793,9 +877,9 @@ Array.prototype.forEach.call($("nav").children,function(b){
 
 /* ---------------- boot ---------------- */
 (function(){
-  var mf={name:"符丁台帳",short_name:"符丁台帳",display:"standalone",
+  var mf={name:"出品台帳",short_name:"出品台帳",display:"standalone",
     background_color:"#0E1A31",theme_color:"#12203C",start_url:".",
-    icons:[{src:"data:image/svg+xml,"+encodeURIComponent("<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' fill='#12203C'/><text x='256' y='336' font-size='272' font-family='sans-serif' font-weight='700' fill='#F2EDE3' text-anchor='middle'>符</text></svg>"),
+    icons:[{src:"data:image/svg+xml,"+encodeURIComponent("<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' fill='#12203C'/><text x='256' y='336' font-size='272' font-family='sans-serif' font-weight='700' fill='#F2EDE3' text-anchor='middle'>出</text></svg>"),
       sizes:"512x512",type:"image/svg+xml",purpose:"any"}]};
   var l=document.createElement("link");
   l.rel="manifest";
