@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<title>符丁台帳</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="符丁台帳">
+<meta name="theme-color" content="#12203C">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' fill='%2312203C'/%3E%3Ctext x='90' y='118' font-size='96' font-family='sans-serif' font-weight='700' fill='%23F2EDE3' text-anchor='middle'%3E符%3C/text%3E%3C/svg%3E">
+<style>
+:root{
+  --navy-900:#0E1A31;
+  --navy-800:#12203C;
+  --navy-700:#1B2A4A;
+  --navy-600:#2A3C61;
+  --paper:#F2EDE3;
+  --paper-dim:#DCD4C4;
+  --sumi:#191919;
+  --shu:#C43B2F;
+  --asagi:#4A8B8C;
+  --gold:#C9A227;
+  --r:10px;
+  --safe-b:env(safe-area-inset-bottom,0px);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+body{
+  background:var(--navy-900);
+  color:var(--paper);
+  font-family:system-ui,-apple-system,"Hiragino Sans","Noto Sans JP","Yu Gothic UI",sans-serif;
+  font-size:16px;line-height:1.5;
+  padding-bottom:calc(76px + var(--safe-b));
+  -webkit-text-size-adjust:100%;
+}
+.mono{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-variant-numeric:tabular-nums}
+
+/* ---------- header ---------- */
+header{
+  position:sticky;top:0;z-index:20;
+  background:linear-gradient(180deg,var(--navy-800),var(--navy-900));
+  padding:calc(env(safe-area-inset-top,0px) + 14px) 18px 12px;
+  border-bottom:1px solid var(--navy-600);
+  display:flex;align-items:baseline;gap:12px;
+}
+header h1{margin:0;font-size:17px;font-weight:800;letter-spacing:.18em}
+header .sub{font-size:11px;color:var(--asagi);letter-spacing:.14em}
+
+/* ---------- panels ---------- */
+main{padding:18px 16px 8px}
+.panel{display:none}
+.panel.on{display:block}
+
+.field{margin-bottom:16px}
+label{display:block;font-size:11px;letter-spacing:.16em;color:var(--paper-dim);margin-bottom:7px;font-weight:700}
+input[type=text],input[type=number],input[type=date],textarea,select{
+  width:100%;background:var(--navy-700);border:1px solid var(--navy-600);
+  color:var(--paper);border-radius:var(--r);padding:13px 14px;font-size:16px;
+  font-family:inherit;
+}
+input:focus,textarea:focus,select:focus{outline:2px solid var(--asagi);outline-offset:1px;border-color:transparent}
+textarea{min-height:64px;resize:vertical}
+
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{
+  flex:1 1 auto;min-width:74px;text-align:center;
+  background:var(--navy-700);border:1px solid var(--navy-600);
+  border-radius:var(--r);padding:11px 8px;font-size:14px;cursor:pointer;
+  color:var(--paper-dim);
+}
+.chip[aria-pressed=true]{background:var(--paper);color:var(--sumi);border-color:var(--paper);font-weight:700}
+
+.row{display:flex;gap:12px}
+.row>*{flex:1;min-width:0}
+
+/* ---------- calc readout ---------- */
+.calc{
+  background:var(--navy-800);border:1px solid var(--navy-600);
+  border-radius:var(--r);padding:14px 16px;margin-bottom:16px;
+}
+.calc dl{margin:0;display:grid;grid-template-columns:1fr auto;gap:9px 12px}
+.calc dt{font-size:12px;color:var(--paper-dim);letter-spacing:.08em}
+.calc dd{margin:0;text-align:right;font-size:17px;font-weight:700}
+.calc dd.floor{color:var(--shu)}
+.calc dd.gain{color:var(--asagi)}
+
+/* ---------- primary button ---------- */
+.btn{
+  width:100%;border:0;border-radius:var(--r);padding:17px;
+  font-size:16px;font-weight:800;letter-spacing:.1em;font-family:inherit;cursor:pointer;
+  background:var(--paper);color:var(--sumi);
+}
+.btn:active{transform:translateY(1px)}
+.btn.ghost{background:transparent;color:var(--paper-dim);border:1px solid var(--navy-600);font-weight:600}
+.btn.danger{background:transparent;color:var(--shu);border:1px solid var(--shu)}
+.btn:disabled{opacity:.4}
+
+/* ---------- SIGNATURE: 荷札 ---------- */
+.tag{
+  position:relative;margin:22px 0 8px;
+  background:var(--paper);color:var(--sumi);
+  border-radius:4px 4px 4px 4px;
+  padding:18px 18px 18px 42px;
+  cursor:pointer;display:block;width:100%;text-align:left;border:0;
+  font-family:inherit;
+  box-shadow:0 10px 26px rgba(0,0,0,.45);
+}
+.tag::before{ /* 紐穴 */
+  content:"";position:absolute;left:16px;top:50%;transform:translateY(-50%);
+  width:13px;height:13px;border-radius:50%;
+  background:var(--navy-900);box-shadow:inset 0 1px 2px rgba(0,0,0,.6);
+}
+.tag::after{ /* 切り欠き */
+  content:"";position:absolute;left:0;top:0;bottom:0;width:30px;
+  border-right:1px dashed rgba(25,25,25,.28);
+}
+.tag .cap{font-size:10px;letter-spacing:.22em;color:#6B6357;display:block;margin-bottom:5px}
+.tag .code{font-size:17px;font-weight:700;letter-spacing:.02em;word-break:break-all;color:var(--shu)}
+.tag .hint{display:block;margin-top:8px;font-size:11px;color:#6B6357;letter-spacing:.08em}
+.tag.copied .hint{color:var(--asagi);font-weight:700}
+
+/* ---------- list ---------- */
+.tabs{display:flex;gap:8px;margin-bottom:14px}
+.tabs .chip{min-width:0}
+.search{margin-bottom:14px}
+
+.card{
+  width:100%;text-align:left;border:0;font-family:inherit;cursor:pointer;
+  background:var(--navy-800);border-left:3px solid var(--navy-600);
+  border-radius:var(--r);padding:13px 15px;margin-bottom:9px;color:var(--paper);
+  display:block;
+}
+.card.sold{border-left-color:var(--asagi);opacity:.62}
+.card.stale{border-left-color:var(--gold)}
+.card .top{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+.card .sku{font-size:12px;letter-spacing:.1em;color:var(--paper-dim)}
+.card .amt{font-size:15px;font-weight:700}
+.card .nm{font-size:15px;margin:4px 0 6px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.card .meta{font-size:11.5px;color:var(--paper-dim);letter-spacing:.04em}
+.card .meta b{color:var(--shu);font-weight:700}
+
+.summary{
+  background:var(--navy-800);border-radius:var(--r);padding:13px 15px;margin-bottom:16px;
+  display:flex;justify-content:space-between;font-size:13px;
+}
+.summary b{font-size:16px}
+
+.empty{text-align:center;padding:56px 24px;color:var(--paper-dim)}
+.empty p{margin:0 0 6px;font-size:14px}
+.empty span{font-size:12.5px;opacity:.7}
+
+/* ---------- sheet ---------- */
+.scrim{position:fixed;inset:0;background:rgba(6,12,24,.72);z-index:40;display:none}
+.scrim.on{display:block}
+.sheet{
+  position:fixed;left:0;right:0;bottom:0;z-index:50;
+  background:var(--navy-800);border-radius:18px 18px 0 0;
+  padding:20px 18px calc(24px + var(--safe-b));
+  max-height:88vh;overflow:auto;transform:translateY(100%);
+  transition:transform .22s ease;border-top:1px solid var(--navy-600);
+}
+.sheet.on{transform:translateY(0)}
+.sheet h2{margin:0 0 4px;font-size:17px}
+.sheet .sk{font-size:12px;color:var(--paper-dim);letter-spacing:.1em;margin-bottom:16px}
+.grip{width:36px;height:4px;border-radius:2px;background:var(--navy-600);margin:0 auto 16px}
+.actions{display:flex;flex-direction:column;gap:9px;margin-top:6px}
+
+/* ---------- nav ---------- */
+nav{
+  position:fixed;left:0;right:0;bottom:0;z-index:30;
+  background:var(--navy-800);border-top:1px solid var(--navy-600);
+  display:flex;padding-bottom:var(--safe-b);
+}
+nav button{
+  flex:1;background:0;border:0;color:var(--paper-dim);font-family:inherit;
+  padding:13px 4px 15px;font-size:11px;letter-spacing:.12em;cursor:pointer;font-weight:700;
+}
+nav button span{display:block;font-size:19px;margin-bottom:2px;font-weight:400}
+nav button[aria-selected=true]{color:var(--paper)}
+nav button[aria-selected=true] span{color:var(--shu)}
+
+/* ---------- toast ---------- */
+#toast{
+  position:fixed;left:50%;bottom:calc(92px + var(--safe-b));transform:translateX(-50%) translateY(14px);
+  background:var(--paper);color:var(--sumi);padding:11px 20px;border-radius:999px;
+  font-size:13.5px;font-weight:700;z-index:60;opacity:0;pointer-events:none;
+  transition:opacity .18s,transform .18s;white-space:nowrap;max-width:90vw;
+}
+#toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+
+hr.sep{border:0;border-top:1px solid var(--navy-600);margin:22px 0}
+.note{font-size:12px;color:var(--paper-dim);line-height:1.7}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>符丁台帳</h1>
+  <span class="sub" id="hcount"></span>
+</header>
+
+<main>
+
+<!-- ============ 登録 ============ -->
+<section class="panel on" id="p-add">
+  <div class="field">
+    <label for="f-name">商品名</label>
+    <input type="text" id="f-name" placeholder="サキエル・XX 使徒XX A-03" autocomplete="off">
+  </div>
+
+  <div class="field">
+    <label>状態</label>
+    <div class="chips" id="f-cond"></div>
+  </div>
+
+  <div class="row">
+    <div class="field">
+      <label for="f-cost">仕入値</label>
+      <input type="number" id="f-cost" inputmode="numeric" placeholder="3500">
+    </div>
+    <div class="field">
+      <label for="f-ship">送料見込み</label>
+      <input type="number" id="f-ship" inputmode="numeric">
+    </div>
+  </div>
+
+  <div class="field">
+    <label>棚</label>
+    <div class="chips" id="f-shelf"></div>
+  </div>
+
+  <div class="calc">
+    <dl>
+      <dt>下限価格（この値まで）</dt><dd class="floor" id="c-floor">—</dd>
+      <dt>初値の目安</dt><dd id="c-start">—</dd>
+      <dt>下限で売れた時の手残り</dt><dd class="gain" id="c-gain">—</dd>
+    </dl>
+  </div>
+
+  <div class="field">
+    <label for="f-price">出品価格（初値）</label>
+    <input type="number" id="f-price" inputmode="numeric">
+  </div>
+
+  <div class="field">
+    <label for="f-note">メモ</label>
+    <input type="text" id="f-note" placeholder="まんだらけ 3F / 箱スレ小" autocomplete="off">
+  </div>
+
+  <button class="btn" id="btn-save">台帳に記入する</button>
+
+  <div id="tag-wrap"></div>
+</section>
+
+<!-- ============ 一覧 ============ -->
+<section class="panel" id="p-list">
+  <div class="tabs" id="l-status"></div>
+  <div class="field search">
+    <input type="text" id="l-q" placeholder="商品名・管理番号で絞り込む" autocomplete="off">
+  </div>
+  <div class="summary" id="l-sum"></div>
+  <div id="l-body"></div>
+</section>
+
+<!-- ============ 設定 ============ -->
+<section class="panel" id="p-set">
+  <div class="row">
+    <div class="field">
+      <label for="s-margin">目標利益率 %</label>
+      <input type="number" id="s-margin" inputmode="numeric">
+    </div>
+    <div class="field">
+      <label for="s-fee">販売手数料 %</label>
+      <input type="number" id="s-fee" inputmode="numeric">
+    </div>
+  </div>
+  <div class="row">
+    <div class="field">
+      <label for="s-ship">送料の既定値</label>
+      <input type="number" id="s-ship" inputmode="numeric">
+    </div>
+    <div class="field">
+      <label for="s-mult">初値の倍率</label>
+      <input type="number" id="s-mult" inputmode="decimal" step="0.1">
+    </div>
+  </div>
+  <div class="row">
+    <div class="field">
+      <label for="s-prefix">接頭辞</label>
+      <input type="text" id="s-prefix" autocomplete="off">
+    </div>
+    <div class="field">
+      <label for="s-offset">符丁オフセット</label>
+      <input type="number" id="s-offset" inputmode="numeric">
+    </div>
+  </div>
+  <p class="note">オフセットは仕入値に足してから符丁化する数です。0以外にすると同一商品の値動きから原価を推測されなくなります。途中で変えると既に貼った符丁と読み方がずれるので、運用開始前に決めてください。</p>
+
+  <hr class="sep">
+
+  <div class="field">
+    <label>符丁の読み方</label>
+    <div class="calc mono" style="text-align:center;font-size:15px;letter-spacing:.2em" id="s-table"></div>
+  </div>
+  <div class="field">
+    <label for="s-dec">符丁を解読する</label>
+    <input type="text" id="s-dec" placeholder="ENTT" autocomplete="off" style="text-transform:uppercase">
+    <p class="note" id="s-dec-out" style="margin-top:8px"></p>
+  </div>
+
+  <hr class="sep">
+
+  <div class="actions">
+    <button class="btn ghost" id="s-export">CSVを書き出す</button>
+    <button class="btn ghost" id="s-backup">バックアップを書き出す</button>
+    <button class="btn ghost" id="s-restore">バックアップから復元する</button>
+    <button class="btn danger" id="s-wipe">台帳をすべて消す</button>
+  </div>
+  <input type="file" id="s-file" accept=".json,application/json" hidden>
+  <p class="note" style="margin-top:16px">書き出したCSVはPC側の <span class="mono">inv.py import</span> にそのまま読み込めます。</p>
+</section>
+
+</main>
+
+<nav id="nav">
+  <button data-p="p-add" aria-selected="true"><span>✎</span>登録</button>
+  <button data-p="p-list" aria-selected="false"><span>▤</span>一覧</button>
+  <button data-p="p-set" aria-selected="false"><span>⚙</span>設定</button>
+</nav>
+
+<div class="scrim" id="scrim"></div>
+<div class="sheet" id="sheet"><div class="grip"></div><div id="sheet-body"></div></div>
+<div id="toast"></div>
+
+<script>
+"use strict";
+
+/* ---------------- storage ---------------- */
+var KEY="fucho_ledger_v1";
+var mem=null;
+function load(){
+  if(mem)return mem;
+  var d={items:[],cfg:{margin:20,fee:10,ship:700,mult:1.6,prefix:"OT",offset:0,shelf:"A",cond:"新品未開封"}};
+  try{
+    var raw=localStorage.getItem(KEY);
+    if(raw){var p=JSON.parse(raw);d.items=p.items||[];for(var k in p.cfg||{})d.cfg[k]=p.cfg[k];}
+  }catch(e){}
+  mem=d;return d;
+}
+function save(){
+  try{localStorage.setItem(KEY,JSON.stringify(mem));}
+  catch(e){toast("保存できません。ブラウザの設定を確認してください");}
+}
+
+/* ---------------- 符丁 ---------------- */
+var FUCHO="TOCEANSHIFT";
+function enc(v){
+  var n=Math.round(v)+load().cfg.offset;
+  if(n<0)n=0;
+  var s=String(n);while(s.length<4)s="0"+s;
+  var o="";for(var i=0;i<s.length;i++)o+=FUCHO.charAt(+s.charAt(i));
+  return o;
+}
+function dec(code){
+  code=(code||"").trim().toUpperCase();
+  if(!code)return null;
+  var s="";
+  for(var i=0;i<code.length;i++){
+    var x=FUCHO.indexOf(code.charAt(i));
+    if(x<0)return null;
+    s+=x;
+  }
+  return parseInt(s,10)-load().cfg.offset;
+}
+
+/* ---------------- 計算 ---------------- */
+function floorPrice(cost,ship){
+  var c=load().cfg;
+  var denom=(100-c.fee-c.margin)/100;
+  if(denom<=0)return 0;
+  return Math.ceil((cost+ship)/denom/100)*100;
+}
+function netAt(price,cost,ship){
+  var c=load().cfg;
+  return Math.round(price-price*c.fee/100-ship-cost);
+}
+function yen(n){return (n<0?"-":"")+"¥"+Math.abs(Math.round(n)).toLocaleString("ja-JP");}
+function today(){var d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
+function ymd6(iso){return iso.replace(/-/g,"").slice(2);}
+
+function nextSku(shelf){
+  var c=load().cfg,max=0;
+  var rx=new RegExp("^"+c.prefix+"-"+shelf+"(\\d+)$");
+  load().items.forEach(function(it){var m=rx.exec(it.sku);if(m)max=Math.max(max,+m[1]);});
+  return c.prefix+"-"+shelf+String(max+1).padStart(3,"0");
+}
+function codeLine(it){
+  return "※管理番号："+it.sku+"-"+ymd6(it.listDate)+"-"+enc(it.cost)+"-"+enc(it.floor);
+}
+
+/* ---------------- ui helpers ---------------- */
+function $(id){return document.getElementById(id);}
+var toastT;
+function toast(m){
+  var t=$("toast");t.textContent=m;t.classList.add("on");
+  clearTimeout(toastT);toastT=setTimeout(function(){t.classList.remove("on");},1900);
+}
+function copy(text,cb){
+  var done=function(){if(cb)cb();};
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(done,function(){legacy();});
+  }else legacy();
+  function legacy(){
+    var ta=document.createElement("textarea");
+    ta.value=text;ta.style.position="fixed";ta.style.opacity="0";
+    document.body.appendChild(ta);ta.select();
+    try{document.execCommand("copy");done();}catch(e){toast("コピーできませんでした");}
+    document.body.removeChild(ta);
+  }
+}
+function chipset(host,vals,cur,onPick){
+  host.innerHTML="";
+  vals.forEach(function(v){
+    var b=document.createElement("button");
+    b.type="button";b.className="chip";b.textContent=v;
+    b.setAttribute("aria-pressed",v===cur?"true":"false");
+    b.onclick=function(){onPick(v);};
+    host.appendChild(b);
+  });
+}
+
+/* ---------------- 登録 ---------------- */
+var CONDS=["新品未開封","未使用に近い","開封品","中古"];
+var SHELVES=["A","B","C","D","E"];
+var draft={cond:null,shelf:null};
+
+function renderAdd(){
+  var c=load().cfg;
+  if(!draft.cond)draft.cond=c.cond;
+  if(!draft.shelf)draft.shelf=c.shelf;
+  chipset($("f-cond"),CONDS,draft.cond,function(v){draft.cond=v;renderAdd();});
+  chipset($("f-shelf"),SHELVES,draft.shelf,function(v){draft.shelf=v;renderAdd();});
+  if($("f-ship").value==="")$("f-ship").value=c.ship;
+  recalc();
+}
+function recalc(){
+  var cost=+$("f-cost").value||0;
+  var ship=+$("f-ship").value;
+  if($("f-ship").value==="")ship=load().cfg.ship;
+  if(!cost){$("c-floor").textContent="—";$("c-start").textContent="—";$("c-gain").textContent="—";return;}
+  var f=floorPrice(cost,ship);
+  var start=Math.ceil(f*load().cfg.mult/100)*100;
+  $("c-floor").textContent=yen(f);
+  $("c-start").textContent=yen(start);
+  $("c-gain").textContent=yen(netAt(f,cost,ship));
+  if(!$("f-price").dataset.touched)$("f-price").value=start;
+}
+["f-cost","f-ship"].forEach(function(id){$(id).addEventListener("input",recalc);});
+$("f-price").addEventListener("input",function(){this.dataset.touched="1";});
+
+$("btn-save").onclick=function(){
+  var name=$("f-name").value.trim();
+  if(!name){toast("商品名を入れてください");$("f-name").focus();return;}
+  var cost=+$("f-cost").value||0;
+  if(!cost){toast("仕入値を入れてください");$("f-cost").focus();return;}
+  var ship=$("f-ship").value===""?load().cfg.ship:+$("f-ship").value;
+  var it={
+    sku:nextSku(draft.shelf),name:name,cond:draft.cond,cost:cost,
+    listDate:today(),price:+$("f-price").value||0,floor:floorPrice(cost,ship),
+    ship:ship,status:"出品中",note:$("f-note").value.trim(),
+    soldDate:"",soldPrice:0,fee:0
+  };
+  load().items.push(it);
+  load().cfg.shelf=draft.shelf;load().cfg.cond=draft.cond;
+  save();
+  showTag(it);
+  $("f-name").value="";$("f-cost").value="";$("f-note").value="";
+  $("f-price").value="";delete $("f-price").dataset.touched;
+  recalc();refreshCount();
+  window.scrollTo({top:document.body.scrollHeight,behavior:"smooth"});
+};
+
+function showTag(it){
+  var line=codeLine(it);
+  var w=$("tag-wrap");
+  w.innerHTML="";
+  var b=document.createElement("button");
+  b.type="button";b.className="tag";
+  b.innerHTML='<span class="cap">'+it.sku+' ／ '+it.name.replace(/</g,"&lt;")+'</span>'+
+              '<span class="code mono"></span>'+
+              '<span class="hint">タップして商品説明の最終行に貼る</span>';
+  b.querySelector(".code").textContent=line;
+  b.onclick=function(){
+    copy(line,function(){
+      b.classList.add("copied");
+      b.querySelector(".hint").textContent="コピーしました";
+      toast("符丁をコピーしました");
+    });
+  };
+  w.appendChild(b);
+}
+
+/* ---------------- 一覧 ---------------- */
+var lfilter="出品中";
+function renderList(){
+  chipset($("l-status"),["出品中","売却済","すべて"],lfilter,function(v){lfilter=v;renderList();});
+  var q=$("l-q").value.trim().toLowerCase();
+  var rows=load().items.filter(function(it){
+    if(lfilter!=="すべて"&&it.status!==lfilter)return false;
+    if(q&&(it.name+" "+it.sku).toLowerCase().indexOf(q)<0)return false;
+    return true;
+  }).sort(function(a,b){return a.sku<b.sku?1:-1;});
+
+  var live=load().items.filter(function(i){return i.status==="出品中";});
+  var stock=live.reduce(function(s,i){return s+i.cost;},0);
+  var profit=load().items.filter(function(i){return i.status==="売却済";})
+    .reduce(function(s,i){return s+netAt(i.soldPrice,i.cost,i.ship||0);},0);
+  $("l-sum").innerHTML="<div>在庫原価 <b>"+yen(stock)+"</b></div><div>累計手残り <b>"+yen(profit)+"</b></div>";
+
+  var body=$("l-body");body.innerHTML="";
+  if(!rows.length){
+    body.innerHTML='<div class="empty"><p>ここには何もありません</p><span>登録タブから1件目を記入してください</span></div>';
+    return;
+  }
+  var now=Date.now();
+  rows.forEach(function(it){
+    var stale=it.status==="出品中"&&(now-new Date(it.listDate).getTime())>90*864e5;
+    var b=document.createElement("button");
+    b.type="button";
+    b.className="card"+(it.status==="売却済"?" sold":stale?" stale":"");
+    var meta=it.status==="売却済"
+      ? it.soldDate+" ／ 売価 "+yen(it.soldPrice)+" ／ 手残り "+yen(netAt(it.soldPrice,it.cost,it.ship||0))
+      : it.listDate+" ／ 原価 "+yen(it.cost)+" ／ 下限 <b>"+yen(it.floor)+"</b>"+(stale?" ／ 90日超":"");
+    b.innerHTML='<div class="top"><span class="sku mono"></span><span class="amt"></span></div>'+
+                '<div class="nm"></div><div class="meta">'+meta+'</div>';
+    b.querySelector(".sku").textContent=it.sku;
+    b.querySelector(".amt").textContent=yen(it.status==="売却済"?it.soldPrice:it.price);
+    b.querySelector(".nm").textContent=it.name;
+    b.onclick=function(){openSheet(it.sku);};
+    body.appendChild(b);
+  });
+}
+$("l-q").addEventListener("input",renderList);
+
+/* ---------------- 明細シート ---------------- */
+function openSheet(sku){
+  var it=load().items.filter(function(i){return i.sku===sku;})[0];
+  if(!it)return;
+  var h='<h2></h2><div class="sk mono">'+it.sku+' ／ '+it.cond+' ／ '+it.listDate+'</div>'+
+        '<div class="calc"><dl>'+
+        '<dt>仕入値</dt><dd>'+yen(it.cost)+'</dd>'+
+        '<dt>下限価格</dt><dd class="floor">'+yen(it.floor)+'</dd>'+
+        '<dt>現在の出品価格</dt><dd>'+yen(it.price)+'</dd>'+
+        '<dt>今売れた時の手残り</dt><dd class="gain">'+yen(netAt(it.price,it.cost,it.ship||0))+'</dd>'+
+        '</dl></div>';
+  if(it.note)h+='<p class="note">'+it.note.replace(/</g,"&lt;")+'</p>';
+  h+='<div class="actions">'+
+     '<button class="btn" id="sh-copy">符丁をコピーする</button>';
+  if(it.status==="出品中"){
+    h+='<button class="btn ghost" id="sh-price">出品価格を書き換える</button>'+
+       '<button class="btn ghost" id="sh-sold">売れたことにする</button>';
+  }else{
+    h+='<button class="btn ghost" id="sh-back">出品中に戻す</button>';
+  }
+  h+='<button class="btn danger" id="sh-del">この行を削除する</button></div>';
+  $("sheet-body").innerHTML=h;
+  $("sheet-body").querySelector("h2").textContent=it.name;
+
+  $("sh-copy").onclick=function(){copy(codeLine(it),function(){toast("符丁をコピーしました");});};
+  if($("sh-price"))$("sh-price").onclick=function(){
+    var v=prompt("新しい出品価格（下限 "+yen(it.floor)+"）",it.price);
+    if(v===null)return;
+    var n=parseInt(v,10);if(isNaN(n))return;
+    if(n<it.floor&&!confirm("下限を下回ります。それでも書き換えますか？"))return;
+    it.price=n;save();closeSheet();renderList();toast("価格を書き換えました");
+  };
+  if($("sh-sold"))$("sh-sold").onclick=function(){
+    var v=prompt("売れた金額",it.price);
+    if(v===null)return;
+    var n=parseInt(v,10);if(isNaN(n))return;
+    it.status="売却済";it.soldPrice=n;it.soldDate=today();
+    it.fee=Math.round(n*load().cfg.fee/100);
+    save();closeSheet();renderList();refreshCount();
+    toast("手残り "+yen(netAt(n,it.cost,it.ship||0)));
+  };
+  if($("sh-back"))$("sh-back").onclick=function(){
+    it.status="出品中";it.soldPrice=0;it.soldDate="";save();
+    closeSheet();renderList();refreshCount();toast("出品中に戻しました");
+  };
+  $("sh-del").onclick=function(){
+    if(!confirm(it.sku+" を削除します。元に戻せません。"))return;
+    mem.items=mem.items.filter(function(i){return i.sku!==it.sku;});
+    save();closeSheet();renderList();refreshCount();toast("削除しました");
+  };
+  $("scrim").classList.add("on");
+  requestAnimationFrame(function(){$("sheet").classList.add("on");});
+}
+function closeSheet(){$("sheet").classList.remove("on");$("scrim").classList.remove("on");}
+$("scrim").onclick=closeSheet;
+
+/* ---------------- 設定 ---------------- */
+var CFGMAP={"s-margin":"margin","s-fee":"fee","s-ship":"ship","s-mult":"mult","s-prefix":"prefix","s-offset":"offset"};
+function renderSet(){
+  var c=load().cfg;
+  for(var id in CFGMAP)$(id).value=c[CFGMAP[id]];
+  var t="";
+  for(var i=1;i<=9;i++)t+=i+"="+FUCHO.charAt(i)+"　";
+  t+="0="+FUCHO.charAt(0);
+  $("s-table").textContent=t;
+}
+Object.keys(CFGMAP).forEach(function(id){
+  $(id).addEventListener("change",function(){
+    var k=CFGMAP[id];
+    var v=(k==="prefix")?this.value.trim().toUpperCase():parseFloat(this.value);
+    if(k!=="prefix"&&isNaN(v))return;
+    load().cfg[k]=v;save();recalc();toast("設定を保存しました");
+  });
+});
+$("s-dec").addEventListener("input",function(){
+  var v=dec(this.value);
+  $("s-dec-out").textContent=v===null?"":this.value.toUpperCase()+" は "+yen(v);
+});
+
+function download(name,text,type){
+  var blob=new Blob([text],{type:type||"text/plain;charset=utf-8"});
+  var a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);a.download=name;
+  document.body.appendChild(a);a.click();
+  setTimeout(function(){URL.revokeObjectURL(a.href);document.body.removeChild(a);},1000);
+}
+$("s-export").onclick=function(){
+  var head=["管理番号","商品名","状態","仕入値","出品日","出品価格","下限価格","販路","URL","ステータス","売却日","売却価格","手数料","送料","備考","符丁"];
+  var esc=function(v){v=(v==null?"":String(v));return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;};
+  var lines=[head.join(",")];
+  load().items.forEach(function(i){
+    lines.push([i.sku,i.name,i.cond,i.cost,i.listDate,i.price,i.floor,"メルカリ","",
+                i.status,i.soldDate,i.soldPrice,i.fee,i.ship,i.note,enc(i.cost)].map(esc).join(","));
+  });
+  download("棚卸し_"+today().replace(/-/g,"")+".csv","\ufeff"+lines.join("\r\n"),"text/csv;charset=utf-8");
+  toast("CSVを書き出しました");
+};
+$("s-backup").onclick=function(){
+  download("台帳バックアップ_"+today().replace(/-/g,"")+".json",JSON.stringify(load()),"application/json");
+  toast("バックアップを書き出しました");
+};
+$("s-restore").onclick=function(){$("s-file").click();};
+$("s-file").onchange=function(){
+  var f=this.files[0];if(!f)return;
+  var r=new FileReader();
+  r.onload=function(){
+    try{
+      var p=JSON.parse(r.result);
+      if(!p||!Array.isArray(p.items))throw 0;
+      if(!confirm("現在の台帳を置き換えます。よろしいですか？"))return;
+      mem={items:p.items,cfg:load().cfg};
+      for(var k in p.cfg||{})mem.cfg[k]=p.cfg[k];
+      save();renderSet();renderList();refreshCount();toast("復元しました");
+    }catch(e){toast("読み込めないファイルです");}
+  };
+  r.readAsText(f);
+  this.value="";
+};
+$("s-wipe").onclick=function(){
+  if(!confirm("台帳のすべての行を消します。元に戻せません。"))return;
+  if(!confirm("本当に消してよろしいですか？"))return;
+  mem.items=[];save();renderList();refreshCount();toast("台帳を空にしました");
+};
+
+/* ---------------- nav ---------------- */
+function refreshCount(){
+  var n=load().items.filter(function(i){return i.status==="出品中";}).length;
+  $("hcount").textContent="出品中 "+n+"件";
+}
+Array.prototype.forEach.call($("nav").children,function(b){
+  b.onclick=function(){
+    Array.prototype.forEach.call($("nav").children,function(x){x.setAttribute("aria-selected",x===b?"true":"false");});
+    Array.prototype.forEach.call(document.querySelectorAll(".panel"),function(p){p.classList.toggle("on",p.id===b.dataset.p);});
+    if(b.dataset.p==="p-list")renderList();
+    if(b.dataset.p==="p-set")renderSet();
+    window.scrollTo(0,0);
+  };
+});
+
+/* ---------------- boot ---------------- */
+(function(){
+  var mf={name:"符丁台帳",short_name:"符丁台帳",display:"standalone",
+    background_color:"#0E1A31",theme_color:"#12203C",start_url:".",
+    icons:[{src:"data:image/svg+xml,"+encodeURIComponent("<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' fill='#12203C'/><text x='256' y='336' font-size='272' font-family='sans-serif' font-weight='700' fill='#F2EDE3' text-anchor='middle'>符</text></svg>"),
+      sizes:"512x512",type:"image/svg+xml",purpose:"any"}]};
+  var l=document.createElement("link");
+  l.rel="manifest";
+  l.href="data:application/json;charset=utf-8,"+encodeURIComponent(JSON.stringify(mf));
+  document.head.appendChild(l);
+  load();renderAdd();refreshCount();
+})();
+</script>
+</body>
+</html>
