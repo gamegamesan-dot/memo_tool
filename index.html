@@ -273,6 +273,7 @@ hr.sep{border:0;border-top:1px solid var(--navy-600);margin:22px 0}
     <input type="text" id="l-q" placeholder="商品名・管理番号で絞り込む" autocomplete="off">
   </div>
   <div class="summary" id="l-sum"></div>
+  <p class="note" id="l-proxy" style="display:none;margin:-6px 0 16px;padding:10px 14px;background:var(--navy-800);border-radius:var(--r);border-left:3px solid var(--asagi)"></p>
   <div id="l-body"></div>
 </section>
 
@@ -660,6 +661,20 @@ function renderList(){
     .reduce(function(s,i){return s+netAt(i.soldPrice,i.cost,i.ship||0,i.platform);},0);
   $("l-sum").innerHTML="<div>在庫原価 <b>"+yen(stock)+"</b></div><div>累計手残り <b>"+yen(profit)+"</b></div>";
 
+  var px=load().items.filter(function(i){return i.proxy;});
+  var pxNote=$("l-proxy");
+  if(px.length){
+    var byG={};
+    px.forEach(function(i){var g=i.genre||"共通";byG[g]=(byG[g]||0)+1;});
+    var parts=[];
+    for(var g in byG)parts.push(g+" "+byG[g]);
+    pxNote.innerHTML="海外需要シグナル　"+parts.join("　／　")+
+      "　<span style=\"opacity:.65\">（代行業者の倉庫宛 "+px.length+"件）</span>";
+    pxNote.style.display="block";
+  }else{
+    pxNote.style.display="none";
+  }
+
   var body=$("l-body");body.innerHTML="";
   if(!rows.length){
     body.innerHTML='<div class="empty"><p>ここには何もありません</p><span>登録タブから1件目を記入してください</span></div>';
@@ -672,7 +687,7 @@ function renderList(){
     b.type="button";
     b.className="card"+(it.status==="売却済"?" sold":stale?" stale":"");
     var meta=it.status==="売却済"
-      ? (it.platform||"メルカリ")+" ／ "+it.soldDate+" ／ 売価 "+yen(it.soldPrice)+" ／ 手残り "+yen(netAt(it.soldPrice,it.cost,it.ship||0,it.platform))
+      ? (it.platform||"メルカリ")+" ／ "+it.soldDate+" ／ 売価 "+yen(it.soldPrice)+" ／ 手残り "+yen(netAt(it.soldPrice,it.cost,it.ship||0,it.platform))+(it.proxy?" ／ <b>海外</b>":"")
       : (it.platform||"メルカリ")+" ／ 原価 "+yen(it.cost)+" ／ 下限 <b>"+yen(it.floor)+"</b>"+(stale?" ／ 90日超":"");
     b.innerHTML='<div class="top"><span class="sku mono"></span><span class="amt"></span></div>'+
                 '<div class="nm"></div><div class="meta">'+meta+'</div>';
@@ -696,6 +711,7 @@ function openSheet(sku){
         '<dt>現在の出品価格</dt><dd>'+yen(it.price)+'</dd>'+
         '<dt>今売れた時の手残り</dt><dd class="gain">'+yen(netAt(it.price,it.cost,it.ship||0,it.platform))+'</dd>'+
         '</dl></div>';
+  if(it.proxy)h+='<p class="note" style="text-align:center;color:var(--asagi)">代行業者の倉庫宛　海外需要あり</p>';
   h+='<p class="note" style="text-align:center">コードの中身　仕入 '+yen(it.cost)+' ／ 下限 '+yen(it.floor)+'</p>';
   if(it.note)h+='<p class="note">'+it.note.replace(/</g,"&lt;")+'</p>';
   h+='<div class="actions">'+
@@ -728,8 +744,9 @@ function openSheet(sku){
     var n=parseInt(v,10);if(isNaN(n))return;
     it.status="売却済";it.soldPrice=n;it.soldDate=today();
     it.fee=Math.round(n*feeOf(it.platform)/100);
+    it.proxy=confirm("発送先は代行業者の倉庫でしたか？\n\nBuyee（千葉）・tenso（東京）・ZenMarket など。\n海外需要の記録に使います。");
     save();closeSheet();renderList();refreshCount();
-    toast("手残り "+yen(netAt(n,it.cost,it.ship||0,it.platform)));
+    toast("手残り "+yen(netAt(n,it.cost,it.ship||0,it.platform))+(it.proxy?"／海外シグナル":""));
   };
   if($("sh-back"))$("sh-back").onclick=function(){
     it.status="出品中";it.soldPrice=0;it.soldDate="";save();
@@ -825,12 +842,12 @@ function download(name,text,type){
   setTimeout(function(){URL.revokeObjectURL(a.href);document.body.removeChild(a);},1000);
 }
 $("s-export").onclick=function(){
-  var head=["管理番号","商品名","状態","仕入値","出品日","出品価格","下限価格","販路","URL","ステータス","売却日","売却価格","手数料","送料","備考","ジャンル","コード"];
+  var head=["管理番号","商品名","状態","仕入値","出品日","出品価格","下限価格","販路","URL","ステータス","売却日","売却価格","手数料","送料","備考","ジャンル","代行経由","コード"];
   var esc=function(v){v=(v==null?"":String(v));return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;};
   var lines=[head.join(",")];
   load().items.forEach(function(i){
     lines.push([i.sku,i.name,i.cond,i.cost,i.listDate,i.price,i.floor,i.platform||"メルカリ","",
-                i.status,i.soldDate,i.soldPrice,i.fee,i.ship,i.note,i.genre||"",enc(i.cost)].map(esc).join(","));
+                i.status,i.soldDate,i.soldPrice,i.fee,i.ship,i.note,i.genre||"",(i.proxy?"1":""),enc(i.cost)].map(esc).join(","));
   });
   download("棚卸し_"+today().replace(/-/g,"")+".csv","\ufeff"+lines.join("\r\n"),"text/csv;charset=utf-8");
   toast("CSVを書き出しました");
