@@ -166,6 +166,10 @@ textarea{min-height:64px;resize:vertical}
 .sheet h2{margin:0 0 4px;font-size:17px}
 .sheet .sk{font-size:12px;color:var(--paper-dim);letter-spacing:.1em;margin-bottom:16px}
 .grip{width:36px;height:4px;border-radius:2px;background:var(--navy-600);margin:0 auto 16px}
+.sheet-top{display:flex;align-items:center;justify-content:flex-end;margin:-4px -4px 8px}
+.sheet-x{background:var(--navy-700);border:1px solid var(--navy-600);color:var(--paper);
+  width:38px;height:38px;border-radius:50%;font-size:20px;line-height:1;cursor:pointer;font-family:inherit}
+.grip-tap{display:block;width:100%;background:0;border:0;padding:4px 0 12px;cursor:pointer}
 .actions{display:flex;flex-direction:column;gap:9px;margin-top:6px}
 
 /* ---------- nav ---------- */
@@ -376,7 +380,11 @@ hr.sep{border:0;border-top:1px solid var(--navy-600);margin:22px 0}
 </nav>
 
 <div class="scrim" id="scrim"></div>
-<div class="sheet" id="sheet"><div class="grip"></div><div id="sheet-body"></div></div>
+<div class="sheet" id="sheet">
+  <button class="grip-tap" id="grip-tap" aria-label="閉じる"><span class="grip"></span></button>
+  <div class="sheet-top"><button class="sheet-x" id="sheet-x" aria-label="閉じる">×</button></div>
+  <div id="sheet-body"></div>
+</div>
 <div id="toast"></div>
 
 <script>
@@ -484,6 +492,12 @@ function floorPrice(cost,ship,plat){
   var denom=(100-feeOf(plat)-c.margin)/100;
   if(denom<=0)return 0;
   return Math.ceil((cost+ship)/denom/100)*100;
+}
+function netOf(it){
+  if(it.status==="売却済"){
+    return Math.round((it.soldPrice||0)-(it.fee||0)-(it.ship||0)-it.cost);
+  }
+  return netAt(it.price,it.cost,it.ship||0,it.platform);
 }
 function netAt(price,cost,ship,plat){
   return Math.round(price-price*feeOf(plat)/100-ship-cost);
@@ -658,7 +672,7 @@ function renderList(){
   var live=load().items.filter(function(i){return i.status==="出品中";});
   var stock=live.reduce(function(s,i){return s+i.cost;},0);
   var profit=load().items.filter(function(i){return i.status==="売却済";})
-    .reduce(function(s,i){return s+netAt(i.soldPrice,i.cost,i.ship||0,i.platform);},0);
+    .reduce(function(s,i){return s+netOf(i);},0);
   $("l-sum").innerHTML="<div>在庫原価 <b>"+yen(stock)+"</b></div><div>累計手残り <b>"+yen(profit)+"</b></div>";
 
   var px=load().items.filter(function(i){return i.proxy;});
@@ -687,7 +701,7 @@ function renderList(){
     b.type="button";
     b.className="card"+(it.status==="売却済"?" sold":stale?" stale":"");
     var meta=it.status==="売却済"
-      ? (it.platform||"メルカリ")+" ／ "+it.soldDate+" ／ 売価 "+yen(it.soldPrice)+" ／ 手残り "+yen(netAt(it.soldPrice,it.cost,it.ship||0,it.platform))+(it.proxy?" ／ <b>海外</b>":"")
+      ? (it.platform||"メルカリ")+" ／ "+it.soldDate+" ／ 売価 "+yen(it.soldPrice)+" ／ 手残り "+yen(netOf(it))+(it.proxy?" ／ <b>海外</b>":"")
       : (it.platform||"メルカリ")+" ／ 原価 "+yen(it.cost)+" ／ 下限 <b>"+yen(it.floor)+"</b>"+(stale?" ／ 90日超":"");
     b.innerHTML='<div class="top"><span class="sku mono"></span><span class="amt"></span></div>'+
                 '<div class="nm"></div><div class="meta">'+meta+'</div>';
@@ -738,16 +752,7 @@ function openSheet(sku){
     if(n<it.floor&&!confirm("下限を下回ります。それでも書き換えますか？"))return;
     it.price=n;save();closeSheet();renderList();toast("価格を書き換えました");
   };
-  if($("sh-sold"))$("sh-sold").onclick=function(){
-    var v=prompt("売れた金額",it.price);
-    if(v===null)return;
-    var n=parseInt(v,10);if(isNaN(n))return;
-    it.status="売却済";it.soldPrice=n;it.soldDate=today();
-    it.fee=Math.round(n*feeOf(it.platform)/100);
-    it.proxy=confirm("発送先は代行業者の倉庫でしたか？\n\nBuyee（千葉）・tenso（東京）・ZenMarket など。\n海外需要の記録に使います。");
-    save();closeSheet();renderList();refreshCount();
-    toast("手残り "+yen(netAt(n,it.cost,it.ship||0,it.platform))+(it.proxy?"／海外シグナル":""));
-  };
+  if($("sh-sold"))$("sh-sold").onclick=function(){ openSoldForm(it); };
   if($("sh-back"))$("sh-back").onclick=function(){
     it.status="出品中";it.soldPrice=0;it.soldDate="";save();
     closeSheet();renderList();refreshCount();toast("出品中に戻しました");
@@ -760,8 +765,83 @@ function openSheet(sku){
   $("scrim").classList.add("on");
   requestAnimationFrame(function(){$("sheet").classList.add("on");});
 }
+function openSoldForm(it){
+  var pxSel=false;
+  var h='<h2>売却を記録する</h2>'+
+    '<div class="sk mono">'+it.sku+' \u2215 '+it.name.replace(/</g,"&lt;")+'</div>'+
+    '<div class="row">'+
+      '<div class="field"><label for="sf-price">売れた金額</label>'+
+      '<input type="number" id="sf-price" inputmode="numeric"></div>'+
+      '<div class="field"><label for="sf-ship">実際の送料</label>'+
+      '<input type="number" id="sf-ship" inputmode="numeric"></div>'+
+    '</div>'+
+    '<div class="field"><label for="sf-fee">販売手数料（自動計算・変更可）</label>'+
+    '<input type="number" id="sf-fee" inputmode="numeric"></div>'+
+    '<div class="calc"><dl>'+
+      '<dt>売価</dt><dd id="sf-a">—</dd>'+
+      '<dt>販売手数料</dt><dd id="sf-b">—</dd>'+
+      '<dt>送料</dt><dd id="sf-c">—</dd>'+
+      '<dt>仕入値</dt><dd>'+yen(it.cost)+'</dd>'+
+      '<dt style="font-weight:700">手元に残る金額</dt><dd class="gain" id="sf-net" style="font-size:20px">—</dd>'+
+      '<dt>利益率</dt><dd id="sf-rate">—</dd>'+
+    '</dl></div>'+
+    '<div class="field"><label>発送先は代行業者の倉庫でしたか</label>'+
+    '<div class="chips" id="sf-proxy"></div>'+
+    '<p class="note" style="margin-top:8px">Buyee（千葉）・tenso（東京）・ZenMarket など。海外需要の記録に使います。</p></div>'+
+    '<div class="actions">'+
+      '<button class="btn" id="sf-ok">この内容で記録する</button>'+
+      '<button class="btn ghost" id="sf-cancel">やめる</button>'+
+    '</div>';
+  $("sheet-body").innerHTML=h;
+
+  $("sf-price").value=it.price||"";
+  $("sf-ship").value=(it.ship!=null?it.ship:load().cfg.ship);
+  $("sf-fee").value=Math.round((it.price||0)*feeOf(it.platform)/100);
+
+  function paintProxy(){
+    chipset($("sf-proxy"),["いいえ","はい"],pxSel?"はい":"いいえ",function(v){pxSel=(v==="はい");paintProxy();});
+  }
+  paintProxy();
+
+  var feeTouched=false;
+  $("sf-fee").addEventListener("input",function(){feeTouched=true;});
+  function recalcSold(){
+    var pr=+$("sf-price").value||0;
+    if(!feeTouched)$("sf-fee").value=Math.round(pr*feeOf(it.platform)/100);
+    var fe=+$("sf-fee").value||0;
+    var sh=+$("sf-ship").value||0;
+    var net=Math.round(pr-fe-sh-it.cost);
+    $("sf-a").textContent=yen(pr);
+    $("sf-b").textContent="-"+yen(fe);
+    $("sf-c").textContent="-"+yen(sh);
+    $("sf-net").textContent=yen(net);
+    $("sf-net").style.color=(net<0?"var(--shu)":"var(--asagi)");
+    $("sf-rate").textContent=pr?((net/pr*100).toFixed(1)+"%"):"—";
+  }
+  ["sf-price","sf-ship","sf-fee"].forEach(function(id){
+    $(id).addEventListener("input",recalcSold);
+  });
+  recalcSold();
+
+  $("sf-cancel").onclick=function(){openSheet(it.sku);};
+  $("sf-ok").onclick=function(){
+    var pr=+$("sf-price").value||0;
+    if(!pr){toast("売れた金額を入れてください");return;}
+    it.status="売却済";
+    it.soldPrice=pr;
+    it.soldDate=today();
+    it.fee=+$("sf-fee").value||0;
+    it.ship=+$("sf-ship").value||0;
+    it.proxy=pxSel;
+    save();closeSheet();renderList();refreshCount();
+    toast("手残り "+yen(netOf(it))+(pxSel?"　海外シグナル":""));
+  };
+}
+
 function closeSheet(){$("sheet").classList.remove("on");$("scrim").classList.remove("on");}
 $("scrim").onclick=closeSheet;
+$("sheet-x").onclick=closeSheet;
+$("grip-tap").onclick=closeSheet;
 
 /* ---------------- 設定 ---------------- */
 var CFGMAP={"s-margin":"margin","s-ship":"ship","s-mult":"mult","s-prefix":"prefix","s-offset":"offset"};
