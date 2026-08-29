@@ -364,11 +364,16 @@ hr.sep{border:0;border-top:1px solid var(--navy-600);margin:22px 0}
   <div class="actions">
     <button class="btn ghost" id="s-export">CSVを書き出す</button>
     <button class="btn ghost" id="s-backup">バックアップを書き出す</button>
+    <button class="btn ghost" id="s-merge">CSVを追記で取り込む</button>
     <button class="btn ghost" id="s-restore">バックアップから復元する</button>
     <button class="btn danger" id="s-wipe">台帳をすべて消す</button>
   </div>
   <input type="file" id="s-file" accept=".json,application/json" hidden>
-  <p class="note" style="margin-top:16px">書き出したCSVはPC側の <span class="mono">inv.py import</span> にそのまま読み込めます。</p>
+  <input type="file" id="s-mfile" accept=".csv,text/csv" hidden>
+  <p class="note" style="margin-top:16px">
+  「追記で取り込む」は PC で作った棚卸しCSVを、いまの台帳に<b>足す</b>操作です。
+  同じ管理番号があれば上書きし、無ければ新しく足します。既存の行は消えません。<br>
+  「復元」は全部を置き換えます。機種変更や故障からの復旧にだけ使ってください。</p>
 </section>
 
 </main>
@@ -936,6 +941,91 @@ $("s-backup").onclick=function(){
   download("台帳バックアップ_"+today().replace(/-/g,"")+".json",JSON.stringify(load()),"application/json");
   toast("バックアップを書き出しました");
 };
+$("s-merge").onclick=function(){$("s-mfile").click();};
+$("s-mfile").onchange=function(){
+  var f=this.files[0];this.value="";
+  if(!f)return;
+  var r=new FileReader();
+  r.onload=function(){
+    try{
+      var rows=parseCsv(r.result);
+      if(!rows.length){toast("行がありません");return;}
+      var add=0,upd=0,skip=0;
+      rows.forEach(function(o){
+        var sku=(o["管理番号"]||"").trim().toUpperCase();
+        var name=(o["商品名"]||"").trim();
+        if(!sku||!name){skip++;return;}
+        var num=function(k){var v=(o[k]||"").trim();return v?Math.round(parseFloat(v)):0;};
+        var it={
+          sku:sku,name:name,
+          cond:(o["状態"]||"中古").trim(),
+          genre:(o["ジャンル"]||"共通").trim(),
+          platform:(o["販路"]||"メルカリShops").trim(),
+          cost:num("仕入値"),
+          listDate:(o["出品日"]||today()).trim(),
+          price:num("出品価格"),
+          floor:num("下限価格"),
+          ship:num("送料"),
+          status:(o["ステータス"]||"出品中").trim(),
+          note:(o["備考"]||"").trim(),
+          soldDate:(o["売却日"]||"").trim(),
+          soldPrice:num("売却価格"),
+          fee:num("手数料"),
+          proxy:((o["代行経由"]||"").trim()==="1")
+        };
+        if(!it.floor)it.floor=floorPrice(it.cost,it.ship,it.platform);
+        var i=findIndexBySku(sku);
+        if(i>=0){load().items[i]=it;upd++;}
+        else{load().items.push(it);add++;}
+      });
+      save();renderList();refreshCount();
+      alert("取り込みました\n\n新規 "+add+" 件\n上書き "+upd+" 件"
+            +(skip?"\n対象外 "+skip+" 件":""));
+    }catch(e){
+      toast("CSVを読めません");
+    }
+  };
+  r.readAsText(f);
+};
+
+function findIndexBySku(sku){
+  var a=load().items;
+  for(var i=0;i<a.length;i++)if(a[i].sku===sku)return i;
+  return -1;
+}
+
+/* 引用符と改行を含むCSVを読む */
+function parseCsv(text){
+  text=text.replace(/^\uFEFF/,"");
+  var rows=[],row=[],cur="",q=false,i=0;
+  while(i<text.length){
+    var c=text.charAt(i);
+    if(q){
+      if(c==='"'){
+        if(text.charAt(i+1)==='"'){cur+='"';i+=2;continue;}
+        q=false;i++;continue;
+      }
+      cur+=c;i++;continue;
+    }
+    if(c==='"'){q=true;i++;continue;}
+    if(c===","){row.push(cur);cur="";i++;continue;}
+    if(c==="\r"){i++;continue;}
+    if(c==="\n"){row.push(cur);rows.push(row);row=[];cur="";i++;continue;}
+    cur+=c;i++;
+  }
+  if(cur!==""||row.length){row.push(cur);rows.push(row);}
+  if(rows.length<2)return [];
+  var head=rows[0].map(function(h){return h.trim();});
+  var out=[];
+  for(var r=1;r<rows.length;r++){
+    if(rows[r].every(function(v){return !v.trim();}))continue;
+    var o={};
+    for(var c2=0;c2<head.length;c2++)o[head[c2]]=rows[r][c2]||"";
+    out.push(o);
+  }
+  return out;
+}
+
 $("s-restore").onclick=function(){$("s-file").click();};
 $("s-file").onchange=function(){
   var f=this.files[0];if(!f)return;
